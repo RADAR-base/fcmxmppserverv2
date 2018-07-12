@@ -75,6 +75,7 @@ public class NotificationSchedulerService implements SchedulerService{
     @Override
     public void stop() {
         if(!isRunning) {
+            // Stop all scheduled tasks
             for (String token : scheduledFutureHashMap.keySet()) {
                 cancelAllNotificationsForToken(token);
             }

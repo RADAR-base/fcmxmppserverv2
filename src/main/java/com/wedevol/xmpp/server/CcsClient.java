@@ -34,6 +34,7 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smackx.ping.PingFailedListener;
 import org.jivesoftware.smackx.ping.PingManager;
+import org.radarcns.xmppserver.factory.SchedulerServiceFactory;
 import org.radarcns.xmppserver.service.SchedulerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,7 +97,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     this.debuggable = debuggable;
     this.username = projectId + "@" + Util.FCM_SERVER_AUTH_CONNECTION;
 
-    this.schedulerService = NotificationSchedulerService.getINSTANCEForCcsClient(this);
+    this.schedulerService = SchedulerServiceFactory.getSchedulerService("simple",this);
+
   }
 
   /**
@@ -294,7 +296,9 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
 
       case Util.BACKEND_ACTION_CANCEL:
-        schedulerService.cancel(inMessage.getFrom());
+        if(inMessage.getDataPayload().get("cancelType").equals("all")) {
+          schedulerService.cancel(inMessage.getFrom());
+        }
         break;
 
         default:

@@ -1,3 +1,7 @@
+#Important Info
+
+This repository is an extended version of [FCM XMPP Connection Server 2](https://github.com/carlosCharz/fcmxmppserverv2) (its fork) which adds support for scheduling notifications for clients which send the details of the notifications to be scheduled via a FCM upstream message. The corresponding android client is located at [FCM Test Android Client](https://github.com/yatharthranjan/FCMTest)
+
 # XMPP Connection Server for FCM (Upgrade from Smack 3.x to 4.x) + Connection Draining Implementation
 This is an upgrade of my last [FCM XMPP Connection Server](https://github.com/carlosCharz/fcmxmppserver) application. Now, this project uses the latest version at this time of the Smack library (4.2.4). _**I just added the connection draining implementation to this project. If you had some problems check my troubleshooting section!**_
 

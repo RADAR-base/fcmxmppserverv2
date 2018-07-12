@@ -8,6 +8,22 @@ public class DatabaseNotificationSchedulerService implements SchedulerService {
 
     private CcsClient ccsClient;
 
+    private boolean isInProcess = true;
+
+    private static DatabaseNotificationSchedulerService INSTANCE = null;
+
+    private DatabaseNotificationSchedulerService(CcsClient ccsClient, boolean isInProcess) {
+        this.ccsClient = ccsClient;
+        this.isInProcess = isInProcess;
+    }
+
+    private static SchedulerService getInstanceForCcsClient(CcsClient ccsClient) {
+        if(INSTANCE == null) {
+            INSTANCE = new DatabaseNotificationSchedulerService(ccsClient, true);
+        }
+        return INSTANCE;
+    }
+
     @Override
     public void start() {
         // TODO intitialize db
@@ -30,7 +46,7 @@ public class DatabaseNotificationSchedulerService implements SchedulerService {
 
     @Override
     public void updateToken(String oldToken, String newToken) {
-        
+
     }
 
     @Override
