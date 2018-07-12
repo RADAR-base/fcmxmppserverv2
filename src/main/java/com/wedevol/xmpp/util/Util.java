@@ -21,6 +21,8 @@ public class Util {
   // For the backend action attribute values
   public static final String BACKEND_ACTION_ECHO = "ECHO";
   public static final String BACKEND_ACTION_MESSAGE = "MESSAGE";
+  public static final String BACKEND_ACTION_SCHEDULE = "SCHEDULE";
+  public static final String BACKEND_ACTION_CANCEL = "CANCEL";
 
   // For the app common payload message attributes (android - xmpp server)
   public static final String PAYLOAD_ATTRIBUTE_MESSAGE = "message";
