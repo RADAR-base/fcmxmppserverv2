@@ -1,0 +1,36 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'application'
+
+group = 'org.radarcns'
+version = '1.0.2'
+
+description = """FCM XMPP Server"""
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+mainClassName = "com.wedevol.xmpp.EntryPoint"
+
+ext.jCommanderVersion = '1.72'
+
+repositories {
+        
+     maven { url "http://repo.maven.apache.org/maven2" }
+}
+dependencies {
+    compile group: 'org.igniterealtime.smack', name: 'smack-java7', version:'4.2.4'
+    compile group: 'org.igniterealtime.smack', name: 'smack-tcp', version:'4.2.4'
+    compile group: 'org.igniterealtime.smack', name: 'smack-extensions', version:'4.2.4'
+    compile group: 'ch.qos.logback', name: 'logback-classic', version:'1.2.3'
+    compile group: 'com.github.kagkarlsson', name: 'db-scheduler', version:'3.2'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version:'2.9.6'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version:'2.9.6'
+    compile group: 'com.beust', name: 'jcommander', version: jCommanderVersion
+    testCompile group: 'org.hsqldb', name: 'hsqldb', version:'2.4.0'
+}
+
+

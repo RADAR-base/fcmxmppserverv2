@@ -1,25 +1,34 @@
 package org.radarcns.xmppserver.service;
 
 import com.wedevol.xmpp.server.CcsClient;
+import org.radarcns.xmppserver.config.DbConfig;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Map;
 
 public class DatabaseNotificationSchedulerService implements SchedulerService {
 
     private CcsClient ccsClient;
 
-    private boolean isInProcess = true;
+    private Connection sqlConnection;
 
     private static DatabaseNotificationSchedulerService INSTANCE = null;
 
-    private DatabaseNotificationSchedulerService(CcsClient ccsClient, boolean isInProcess) {
+    private DatabaseNotificationSchedulerService(CcsClient ccsClient, DbConfig dbConfig) {
         this.ccsClient = ccsClient;
-        this.isInProcess = isInProcess;
+        try {
+            this.sqlConnection = DriverManager.getConnection("jdbc:hsqldb:" + dbConfig.getDbType()
+                    + DbConfig.DB_PATH_SEPARATOR + dbConfig.getDbPath(), "", "");
+        } catch (SQLException exc) {
+            throw new RuntimeException("Cannot get connection to database with config: {}" + dbConfig.toString(), exc);
+        }
     }
 
-    private static SchedulerService getInstanceForCcsClient(CcsClient ccsClient) {
+    public static SchedulerService getInstanceForCcsClientAndCofig(CcsClient ccsClient, DbConfig dbConfig) {
         if(INSTANCE == null) {
-            INSTANCE = new DatabaseNotificationSchedulerService(ccsClient, true);
+            INSTANCE = new DatabaseNotificationSchedulerService(ccsClient, dbConfig);
         }
         return INSTANCE;
     }
@@ -32,6 +41,12 @@ public class DatabaseNotificationSchedulerService implements SchedulerService {
     @Override
     public void stop() {
         // TODO close db
+
+        try {sqlConnection.commit();
+            sqlConnection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

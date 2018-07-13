@@ -1,6 +1,8 @@
 package org.radarcns.xmppserver.factory;
 
 import com.wedevol.xmpp.server.CcsClient;
+import org.radarcns.xmppserver.config.DbConfig;
+import org.radarcns.xmppserver.service.DatabaseNotificationSchedulerService;
 import org.radarcns.xmppserver.service.NotificationSchedulerService;
 import org.radarcns.xmppserver.service.SchedulerService;
 import org.slf4j.Logger;
@@ -13,12 +15,12 @@ public class SchedulerServiceFactory {
     public static SchedulerService getSchedulerService(String type, CcsClient ccsClient) {
         switch (type) {
             case "in-mem-db":
-                //TODO get instance
-                return null;
+                DbConfig dbConfig = new DbConfig("mem", "notificationDB");
+                return DatabaseNotificationSchedulerService.getInstanceForCcsClientAndCofig(ccsClient, dbConfig);
 
             case "persistent-db":
-                //TODO get instance
-                return null;
+                dbConfig = new DbConfig("file", "/usr/hsql/notification");
+                return DatabaseNotificationSchedulerService.getInstanceForCcsClientAndCofig(ccsClient, dbConfig);
 
             case "simple":
                 return NotificationSchedulerService.getINSTANCEForCcsClient(ccsClient);
