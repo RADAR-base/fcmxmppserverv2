@@ -35,7 +35,7 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smackx.ping.PingFailedListener;
 import org.jivesoftware.smackx.ping.PingManager;
 import org.radarcns.xmppserver.factory.SchedulerServiceFactory;
-import org.radarcns.xmppserver.service.SchedulerService;
+import org.radarcns.xmppserver.service.NotificationSchedulerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParser;
@@ -47,15 +47,13 @@ import com.wedevol.xmpp.util.BackOffStrategy;
 import com.wedevol.xmpp.util.MessageMapper;
 import com.wedevol.xmpp.util.Util;
 
-import org.radarcns.xmppserver.service.NotificationSchedulerService;
-
 /**
  * Class that connects to FCM Cloud Connection Server and handles stanzas (ACK, NACK, upstream,
  * downstream). Sample Smack implementation of a client for FCM Cloud Connection Server. Most of it
  * has been taken more or less verbatim from Google's documentation: <a href=
  * "https://firebase.google.com/docs/cloud-messaging/xmpp-server-ref">https://firebase.google.com/docs/cloud-messaging/xmpp-server-ref</a>
  * 
- * @author Charz++
+ * @author yatharthranjan
  */
 public class CcsClient implements StanzaListener, ReconnectionListener, ConnectionListener, PingFailedListener {
 
@@ -73,7 +71,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
   // messages from backoff failures
   private final Map<String, Message> pendingMessages = new ConcurrentHashMap<>();
 
-  private SchedulerService schedulerService;
+  private NotificationSchedulerService schedulerService;
 
   /**
    * Public constructor for the CCS Client
@@ -290,7 +288,9 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
 
       case Util.BACKEND_ACTION_SCHEDULE:
-        schedulerService.start();
+        if(!schedulerService.isRunning()) {
+          schedulerService.start();
+        }
         schedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
         break;
 

@@ -1,5 +1,11 @@
 package org.radarcns.xmppserver.config;
 
+
+/**
+ * Database config class for the XMPP Server
+ *
+ * @author yatharthranjan
+ */
 public class DbConfig {
 
     public static final String DB_PATH_SEPARATOR = ":";

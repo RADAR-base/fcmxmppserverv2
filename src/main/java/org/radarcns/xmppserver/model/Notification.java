@@ -4,7 +4,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
+/**
+ * Notification model class for the XMPP Server
+ *
+ * @author yatharthranjan
+ */
 public class Notification {
 
     private String title;

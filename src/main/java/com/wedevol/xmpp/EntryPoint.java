@@ -12,19 +12,18 @@ import com.beust.jcommander.ParameterException;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
 import org.radarcns.xmppserver.commandline.CommandLineArgs;
-import org.radarcns.xmppserver.factory.SchedulerServiceFactory;
-import org.radarcns.xmppserver.service.SchedulerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.wedevol.xmpp.bean.CcsOutMessage;
 import com.wedevol.xmpp.server.CcsClient;
 import com.wedevol.xmpp.util.MessageMapper;
 import com.wedevol.xmpp.util.Util;
+import org.radarcns.xmppserver.config.Config;
 
 /**
  * Entry Point class for the XMPP Server
  *
- * @author Charz++
+ * @author yatharthranjan
  */
 public class EntryPoint extends CcsClient {
 
@@ -57,7 +56,6 @@ public class EntryPoint extends CcsClient {
     }
 
     public static void main(String[] args) throws SmackException, IOException {
-
         final CommandLineArgs commandLineArgs = new CommandLineArgs();
         final JCommander parser = JCommander.newBuilder().addObject(commandLineArgs).build();
         try {
@@ -74,6 +72,19 @@ public class EntryPoint extends CcsClient {
         }
 
         // TODO also look in Environment Variables to initialise these values
+
+        if(commandLineArgs.dbPath == null || commandLineArgs.dbPath.isEmpty()) {
+            switch (commandLineArgs.schedulerType) {
+                case Config.SCHEDULER_MEM:
+                    commandLineArgs.dbPath = "notificationDB";
+                    break;
+
+                case Config.SCHEDULER_PERSISTENT:
+                    commandLineArgs.dbPath = "/usr/hsql/notification";
+                    break;
+            }
+        }
+
         new EntryPoint(commandLineArgs.sender, commandLineArgs.serverKey, false, commandLineArgs.token, commandLineArgs.schedulerType);
     }
 }

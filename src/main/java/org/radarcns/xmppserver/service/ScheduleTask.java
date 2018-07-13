@@ -39,7 +39,7 @@ public class ScheduleTask {
             final String jsonRequest = MessageMapper.toJsonString(outMessage);
             ccsClient.sendDownstreamMessage(messageId, jsonRequest);
 
-            NotificationSchedulerService.logger.info("Sent downstream Scheduled message with title: {}", notification.getTitle());
+            SimpleNotificationSchedulerService.logger.info("Sent downstream Scheduled message with title: {}", notification.getTitle());
 
         }, delay, TimeUnit.MILLISECONDS);
     }

@@ -7,8 +7,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Map;
-
-public class DatabaseNotificationSchedulerService implements SchedulerService {
+/**
+ * Database notification scheduler service class for the XMPP Server
+ * This has functionality for both in-memory and persisent data bases.
+ *
+ * @author yatharthranjan
+ */
+public class DatabaseNotificationSchedulerService implements NotificationSchedulerService {
 
     private CcsClient ccsClient;
 
@@ -26,7 +31,7 @@ public class DatabaseNotificationSchedulerService implements SchedulerService {
         }
     }
 
-    public static SchedulerService getInstanceForCcsClientAndCofig(CcsClient ccsClient, DbConfig dbConfig) {
+    public static NotificationSchedulerService getInstanceForCcsClientAndCofig(CcsClient ccsClient, DbConfig dbConfig) {
         if(INSTANCE == null) {
             INSTANCE = new DatabaseNotificationSchedulerService(ccsClient, dbConfig);
         }

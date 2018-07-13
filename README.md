@@ -1,8 +1,51 @@
 #Important Info
 
 This repository is an extended version of [FCM XMPP Connection Server 2](https://github.com/carlosCharz/fcmxmppserverv2) (its fork) which adds support for scheduling notifications for clients which send the details of the notifications to be scheduled via a FCM upstream message. The corresponding android client is located at [FCM Test Android Client](https://github.com/yatharthranjan/FCMTest)
+The following chnages have been introduced -
 
-# XMPP Connection Server for FCM (Upgrade from Smack 3.x to 4.x) + Connection Draining Implementation
+1. The maven build has been converted to a gradle build and several improvements to the build process.
+2. Added a command line parser for arguments and also looks in environment variables for these values.
+3. Added notification scheduling function by parsing payloads from upstream messages containing the action `SCHEDULE`. The format of the data payload of upstream message should contain atleast
+    ```javascript
+    {
+    "data":
+        {
+            "notificationTitle":"Schedule id 1",
+            "notificationMessage":"hello",
+            "action":"SCHEDULE",
+            "time":"1531482349791"
+         },
+         ...
+    }
+    ```
+4. Currently it supports 3 types of schedulers - simple, in-memory and persistent. As the name suggests, simple is just a java thread based scheduler without any DB, in-memory uses an instance of in-memory database and persistent writes database files to disk. We use the HyperSQL DB or HSQL in short as it supports both in memory and persistent options.
+5. To locally build the server and run it - 
+    ```shell
+    ./gradlew clean build
+    ```
+    Then you can just run the jar file generated or any of the distribution files with -h or --help option to display the usage -
+    ```shell
+    java -jar xmppserver2-all-1.0.2.jar -help
+    ```
+    
+    or install package into `/usr/local` using the distribution
+    ```shell
+    sudo tar -xzf build/distributions/radar-xmppserver-1.0.2.tar.gz -C /usr/local --strip-components=1
+    ```
+    Now you can run with command
+    ```shell
+    radar-xmppserver --help
+    ```
+    
+    Run again by specifying the options you find in the above help -
+    ```shell
+    radar-xmppserver [Options]
+    ```
+6. TODO -- ADD DOCKERFILE AND ITS INFORMATION
+
+# Old README from base
+
+### XMPP Connection Server for FCM (Upgrade from Smack 3.x to 4.x) + Connection Draining Implementation
 This is an upgrade of my last [FCM XMPP Connection Server](https://github.com/carlosCharz/fcmxmppserver) application. Now, this project uses the latest version at this time of the Smack library (4.2.4). _**I just added the connection draining implementation to this project. If you had some problems check my troubleshooting section!**_
 
 The new version has introduced new terminology, deprecated some older methods and enriched the library in general. The problem started when there is a no working example out there using the new version to build a XMPP CCS for FCM. In summary, the API changes from the 3.x to the 4.x version are:
@@ -23,16 +66,16 @@ _**ADDITIONAL USEFUL LINKS**_
 * [XMPP Connection Server for FCM](https://github.com/carlosCharz/fcmxmppserver): This project is the original code base and it gives you a simple explanation of FCM XMPP Connection Server.
 * [FCM Connection Draining solution explanation](https://youtu.be/6AQCnNWPksg): This video explains how I handle the FCM Connection Draining message.
 
-## New Smack libraries
+### New Smack libraries
 
  * [Smack java 7](https://mvnrepository.com/artifact/org.igniterealtime.smack/smack-java7)
  * [Smack tcp](https://mvnrepository.com/artifact/org.igniterealtime.smack/smack-tcp)
  * [Smack extensions](https://mvnrepository.com/artifact/org.igniterealtime.smack/smack-extensions)
 
-## How to start the server
+### How to start the server
 Just because it is the same project as my prior solution, the way to start the server is exactly the same. You can read my [how to start the server](https://github.com/carlosCharz/fcmxmppserver).
 
-## Troubleshooting
+### Troubleshooting
 This is a simple java code. You can integrate with just spring or spring in a container (Tomcat for example). In any case you need to take into account these issues: 
 
 1. _**If using a simple java application, keep the application alive listening messages.**_ This problem occurs when you use a simple java code as a daemon in linux (that's why I put the while true workaround).
@@ -49,7 +92,7 @@ I am Carlos Becerra - MSc. Softwware & Systems. You can contact me via:
 * [Google+](https://plus.google.com/+CarlosBecerraRodr%C3%ADguez)
 * [Twitter](https://twitter.com/CarlosBecerraRo)
 
-## Thanks
+### Thanks
 To tell the truth. I was really worried looking for the right solution. Finally, I made a list of useful links (apart from the above documentation links).
 
 * [gcm server](http://www.marothiatechs.com/2015/08/building-your-own-android-chat_18.html)
@@ -59,7 +102,7 @@ To tell the truth. I was really worried looking for the right solution. Finally,
 
 _**Any improvement or comment about the project is always welcome! As well as others shared their code publicly I want to share mine! Thanks!**_
 
-## License
+### License
 ```javas
 Copyright 2016 Carlos Becerra
 
