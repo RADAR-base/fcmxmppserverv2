@@ -13,7 +13,10 @@ The following chnages have been introduced -
             "notificationTitle":"Schedule id 1",
             "notificationMessage":"hello",
             "action":"SCHEDULE",
-            "time":"1531482349791"
+            "time":"1531482349791",
+            "subjectId":"test"
+            
+            // TODO add timeTolive or expiry
          },
          ...
     }
@@ -41,7 +44,21 @@ The following chnages have been introduced -
     ```shell
     radar-xmppserver [Options]
     ```
-6. TODO -- ADD DOCKERFILE AND ITS INFORMATION
+    
+6. Notifications can be cancelled using the data below from an upstream message - 
+    ```javascript
+    {
+    "data":
+        {
+            "action": "CANCEL",
+            "cancelType": "all",
+            "subjectId": "yatharth"
+         }
+         ...
+    }
+
+    ```
+7. TODO -- ADD DOCKERFILE AND ITS INFORMATION
 
 # Old README from base
 

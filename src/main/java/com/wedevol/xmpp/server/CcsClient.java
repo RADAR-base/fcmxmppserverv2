@@ -73,6 +73,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
 
   private NotificationSchedulerService schedulerService;
 
+  private static CcsClient Instance = null;
+
   /**
    * Public constructor for the CCS Client
    * 
@@ -80,7 +82,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
    * @param apiKey
    * @param debuggable
    */
-  public CcsClient(String projectId, String apiKey, boolean debuggable, String schedulerType) {
+  protected CcsClient(String projectId, String apiKey, boolean debuggable, String schedulerType) {
     // Add FCM Packet Extension Provider
     ProviderManager.addExtensionProvider(Util.FCM_ELEMENT_NAME, Util.FCM_NAMESPACE,
         new ExtensionElementProvider<FcmPacketExtension>() {
@@ -95,7 +97,17 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     this.debuggable = debuggable;
     this.username = projectId + "@" + Util.FCM_SERVER_AUTH_CONNECTION;
 
-    this.schedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType, this);
+    this.schedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
+
+    Instance = this;
+  }
+
+
+  public static CcsClient getInstance() {
+    if (Instance == null) {
+      throw new IllegalStateException("CcsClient must first be instantiated possibly by a sub-class");
+    }
+    return Instance;
   }
 
   /**
@@ -264,7 +276,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     final Optional<String> actionObj =
         Optional.ofNullable(inMessage.getDataPayload().get(Util.PAYLOAD_ATTRIBUTE_ACTION));
     if (!actionObj.isPresent()) {
-      throw new IllegalStateException("Action must not be null! Options: 'ECHO', 'MESSAGE', 'SCHEDULE'");
+      throw new IllegalStateException("Action must not be null! Options: 'ECHO', 'MESSAGE', 'SCHEDULE', 'CANCEL'");
     }
     final String action = actionObj.get();
 
@@ -281,6 +293,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
 
         final CcsOutMessage outMessage = new CcsOutMessage(to, messageId, inMessage.getDataPayload());
         final String jsonRequest = MessageMapper.toJsonString(outMessage);
+        sendDownstreamMessage(inMessage.getFrom(), jsonRequest);
         break;
 
       case Util.BACKEND_ACTION_MESSAGE:
@@ -302,7 +315,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
 
         default:
           logger.warn("Wrong action specified : " + action);
-          throw new IllegalStateException("Wrong action specified, Options: 'ECHO', 'MESSAGE', 'SCHEDULE'");
+          throw new IllegalStateException("Wrong action specified, Options: 'ECHO', 'MESSAGE', 'SCHEDULE', 'CANCEL'");
 
     }
 /*    if (action.equals(Util.BACKEND_ACTION_ECHO)) { // send a message to the sender (user itself)

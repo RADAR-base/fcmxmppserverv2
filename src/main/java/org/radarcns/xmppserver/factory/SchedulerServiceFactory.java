@@ -18,22 +18,22 @@ public class SchedulerServiceFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(SchedulerServiceFactory.class);
 
-    public static NotificationSchedulerService getSchedulerService(String type, CcsClient ccsClient) {
+    public static NotificationSchedulerService getSchedulerService(String type) {
         switch (type) {
             case Config.SCHEDULER_MEM:
                 DbConfig dbConfig = new DbConfig("mem", "notificationDB");
-                return DatabaseNotificationSchedulerService.getInstanceForCcsClientAndCofig(ccsClient, dbConfig);
+                return DatabaseNotificationSchedulerService.getInstanceForCofig(dbConfig);
 
             case Config.SCHEDULER_PERSISTENT:
                 dbConfig = new DbConfig("file", "/usr/hsql/notification");
-                return DatabaseNotificationSchedulerService.getInstanceForCcsClientAndCofig(ccsClient, dbConfig);
+                return DatabaseNotificationSchedulerService.getInstanceForCofig(dbConfig);
 
             case Config.SCHEDULER_SIMPLE:
-                return SimpleNotificationSchedulerService.getINSTANCEForCcsClient(ccsClient);
+                return SimpleNotificationSchedulerService.getINSTANCE();
 
                 default: logger.warn("No Scheduler Service for type : {}, Using a simple " +
                         "notification scheduler service", type);
-                return SimpleNotificationSchedulerService.getINSTANCEForCcsClient(ccsClient);
+                return SimpleNotificationSchedulerService.getINSTANCE();
         }
     }
 }

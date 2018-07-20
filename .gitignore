@@ -35,6 +35,8 @@ pom.xml.*
 
 #Gradle
 .gradle
+out
+build
 
 #Ant
 build.xml

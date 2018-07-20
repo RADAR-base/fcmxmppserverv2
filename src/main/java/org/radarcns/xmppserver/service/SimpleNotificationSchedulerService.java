@@ -7,11 +7,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 
 public class SimpleNotificationSchedulerService implements NotificationSchedulerService{
 
-    private CcsClient ccsClient;
     protected static final Logger logger = LoggerFactory.getLogger(SimpleNotificationSchedulerService.class);
     private HashMap<String, HashSet<ScheduledFuture<?>>> scheduledFutureHashMap;
 
@@ -20,22 +20,12 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     private boolean isRunning = false;
 
-    private SimpleNotificationSchedulerService(CcsClient ccsClient) {
-        this.ccsClient = ccsClient;
-    }
-
     private void scheduleNotificationForDate(String from, Map<String, String> payload) {
-        String datetime = payload.get("time"); // epoch timestamp in milliseconds
-        String notificationTitle = payload.get("notificationTitle");
-        String notificationMessage = payload.get("notificationMessage");
-
-        Date date = new Date(Long.parseLong(datetime));
-
-
-        Notification notification = new Notification(notificationTitle, notificationMessage, date, from);
-        ScheduledFuture scheduledFuture = ScheduleTask.scheduleForDate(ccsClient, notification);
+        Notification notification = Notification.getNotification(from, payload);
+        ScheduledFuture scheduledFuture = ScheduleTask.scheduleForDate(notification);
 
         logger.info(notification.toString());
+        logger.info("" + scheduledFuture.getDelay(TimeUnit.MILLISECONDS));
 
         if (scheduledFutureHashMap.containsKey(from)) {
             if (! scheduledFutureHashMap.get(from).contains(scheduledFuture)) {
@@ -49,15 +39,15 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
         }
     }
 
-    public void cancelAllNotificationsForToken(String token) {
+    private void cancelAllNotificationsForToken(String token) {
         if (scheduledFutureHashMap.containsKey(token)) {
             scheduledFutureHashMap.get(token).forEach(s -> s.cancel(true));
         }
     }
 
-    public static NotificationSchedulerService getINSTANCEForCcsClient(CcsClient ccsClient) {
+    public static NotificationSchedulerService getINSTANCE() {
         if(INSTANCE == null) {
-            INSTANCE = new SimpleNotificationSchedulerService(ccsClient);
+            INSTANCE = new SimpleNotificationSchedulerService();
         }
         return INSTANCE;
     }

@@ -3,8 +3,6 @@ package com.wedevol.xmpp;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import com.beust.jcommander.JCommander;
@@ -14,10 +12,7 @@ import org.jivesoftware.smack.XMPPException;
 import org.radarcns.xmppserver.commandline.CommandLineArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.wedevol.xmpp.bean.CcsOutMessage;
 import com.wedevol.xmpp.server.CcsClient;
-import com.wedevol.xmpp.util.MessageMapper;
-import com.wedevol.xmpp.util.Util;
 import org.radarcns.xmppserver.config.Config;
 
 /**
@@ -29,7 +24,7 @@ public class EntryPoint extends CcsClient {
 
     protected static final Logger logger = LoggerFactory.getLogger(EntryPoint.class);
 
-    public EntryPoint(String projectId, String apiKey, boolean debuggable, String toRegId, String schedulerType) {
+    private EntryPoint(String projectId, String apiKey, boolean debuggable, String toRegId, String schedulerType) {
         super(projectId, apiKey, debuggable, schedulerType);
 
         try {
@@ -39,14 +34,14 @@ public class EntryPoint extends CcsClient {
             logger.error("Error trying to connect. Error: {}", e.getMessage());
         }
 
-        // Send a sample downstream message to a device
+        /*        // Send a sample downstream message to a device
         final String messageId = Util.getUniqueMessageId();
         final Map<String, String> dataPayload = new HashMap<String, String>();
         dataPayload.put(Util.PAYLOAD_ATTRIBUTE_MESSAGE, "This is the simple sample message");
         final CcsOutMessage message = new CcsOutMessage(toRegId, messageId, dataPayload);
         final String jsonRequest = MessageMapper.toJsonString(message);
-        sendDownstreamMessage(messageId, jsonRequest);
-
+        //sendDownstreamMessage(messageId, jsonRequest);
+        */
         try {
             final CountDownLatch latch = new CountDownLatch(1);
             latch.await();
@@ -59,7 +54,7 @@ public class EntryPoint extends CcsClient {
         final CommandLineArgs commandLineArgs = new CommandLineArgs();
         final JCommander parser = JCommander.newBuilder().addObject(commandLineArgs).build();
         try {
-            parser.setProgramName("fcmxmppserverv2");
+            parser.setProgramName("radar-xmppserver");
             parser.parse(args);
         } catch (ParameterException exc) {
             parser.usage();
@@ -71,7 +66,27 @@ public class EntryPoint extends CcsClient {
             System.exit(0);
         }
 
-        // TODO also look in Environment Variables to initialise these values
+
+        // Check if System environment variables exist and overwrite the values
+
+        commandLineArgs.schedulerType = System.getenv("RADAR_XMPP_SCHEDULER_TYPE") != null ?
+                System.getenv("RADAR_XMPP_SCHEDULER_TYPE") : commandLineArgs.schedulerType;
+
+        commandLineArgs.dbPath = System.getenv("RADAR_XMPP_DB_PATH") != null ?
+                System.getenv("RADAR_XMPP_DB_PATH") : commandLineArgs.dbPath;
+
+        commandLineArgs.sender = System.getenv("RADAR_XMPP_FCM_SENDER_KEY") != null ?
+                System.getenv("RADAR_XMPP_FCM_SENDER_KEY") : commandLineArgs.sender ;
+
+        commandLineArgs.serverKey = System.getenv("RADAR_XMPP_FCM_SERVER_KEY") != null ?
+                System.getenv("RADAR_XMPP_FCM_SERVER_KEY") : commandLineArgs.serverKey;
+
+        commandLineArgs.dbUser = System.getenv("RADAR_XMPP_DB_USER") != null ?
+                System.getenv("RADAR_XMPP_DB_USER") : commandLineArgs.dbUser;
+
+        commandLineArgs.dbPass = System.getenv("RADAR_XMPP_DB_PASS") != null ?
+                System.getenv("RADAR_XMPP_DB_PASS") : commandLineArgs.dbPass;
+
 
         if(commandLineArgs.dbPath == null || commandLineArgs.dbPath.isEmpty()) {
             switch (commandLineArgs.schedulerType) {
@@ -85,6 +100,12 @@ public class EntryPoint extends CcsClient {
             }
         }
 
+        if(commandLineArgs.sender == null || commandLineArgs.serverKey == null) {
+            parser.usage();
+            logger.error("ERROR: Please specify the SENDER KEY and SERVER KEY either via commandline args or via environment variables");
+        }
+
         new EntryPoint(commandLineArgs.sender, commandLineArgs.serverKey, false, commandLineArgs.token, commandLineArgs.schedulerType);
     }
+
 }
