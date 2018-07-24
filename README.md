@@ -1,4 +1,4 @@
-#Important Info
+# Important Info
 
 This repository is an extended version of [FCM XMPP Connection Server 2](https://github.com/carlosCharz/fcmxmppserverv2) (its fork) which adds support for scheduling notifications for clients which send the details of the notifications to be scheduled via a FCM upstream message. The corresponding android client is located at [FCM Test Android Client](https://github.com/yatharthranjan/FCMTest) and the cordova client is located at [Cordova client](https://github.com/yatharthranjan/cordova-notification-test) which uses this [fcm plugin](https://github.com/yatharthranjan/cordova-plugin-fcm) 
 The following changes have been introduced -

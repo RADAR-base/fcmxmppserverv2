@@ -1,5 +1,6 @@
 package org.radarcns.xmppserver.model;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,7 +10,7 @@ import java.util.Objects;
  *
  * @author yatharthranjan
  */
-public class Notification {
+public class Notification implements Serializable{
 
     private String title;
     private String message;

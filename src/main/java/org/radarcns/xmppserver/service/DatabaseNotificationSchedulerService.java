@@ -3,16 +3,18 @@ package org.radarcns.xmppserver.service;
 import com.github.kagkarlsson.scheduler.Scheduler;
 import com.github.kagkarlsson.scheduler.task.helper.OneTimeTask;
 import com.github.kagkarlsson.scheduler.task.helper.Tasks;
-import com.wedevol.xmpp.server.CcsClient;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.radarcns.xmppserver.ccs.CcsClientWrapper;
 import org.radarcns.xmppserver.commandline.CommandLineArgs;
 import org.radarcns.xmppserver.config.DbConfig;
 import org.radarcns.xmppserver.model.Notification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Database notification scheduler service class for the XMPP Server
@@ -26,7 +28,13 @@ public class DatabaseNotificationSchedulerService implements NotificationSchedul
 
     private BasicDataSource basicDataSource;
 
+    OneTimeTask<Notification> notificationOneTimeTask;
+
+    private static final String TASK_NAME = "notification-one-time";
+
     private static DatabaseNotificationSchedulerService INSTANCE = null;
+
+    Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
 
     private DatabaseNotificationSchedulerService(DbConfig dbConfig) {
         this.basicDataSource = new BasicDataSource();
@@ -47,7 +55,6 @@ public class DatabaseNotificationSchedulerService implements NotificationSchedul
 
     @Override
     public void start() {
-        // TODO intitialize db
 
         try {
             // Create table for db-scheduler
@@ -55,7 +62,7 @@ public class DatabaseNotificationSchedulerService implements NotificationSchedul
                     .executeUpdate(
                             "create table if not exists scheduled_tasks (\n" +
                                     "  task_name varchar(40) not null,\n" +
-                                    "  task_instance varchar(40) not null,\n" +
+                                    "  task_instance varchar(240) not null,\n" +
                                     "  task_data blob,\n" +
                                     "  execution_time timestamp(6) not null,\n" +
                                     "  picked BOOLEAN not null,\n" +
@@ -67,21 +74,30 @@ public class DatabaseNotificationSchedulerService implements NotificationSchedul
                                     "  PRIMARY KEY (task_name, task_instance)\n" +
                                     ")");
 
-            // TODO Create a new table for storing FCM tokens and Foreign keys as tasks
-            basicDataSource.getConnection().createStatement()
-                    .executeUpdate(
-                            ""
-                    );
-
         } catch (SQLException e) {
             e.printStackTrace();
             stop();
         }
+        notificationOneTimeTask = Tasks.oneTime(TASK_NAME, Notification.class).execute(
+                (inst, ctx) -> {
+                    CcsClientWrapper.getInstance().sendNotification(inst.getData());
+                }
+        );
+
+        scheduler = Scheduler
+                .create(basicDataSource, notificationOneTimeTask)
+                .threads(5)
+                .build();
+
+        scheduler.start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
+
     }
 
     @Override
     public void stop() {
-        // TODO close db
+        scheduler.stop();
 
         try {
             basicDataSource.close();
@@ -92,19 +108,22 @@ public class DatabaseNotificationSchedulerService implements NotificationSchedul
 
     @Override
     public void schedule(String from, Map<String, String> payload) {
-        // TODO add notifications to database and schedule
 
+        // TODO add subject ID in the task instance id
         Notification notification = Notification.getNotification(from, payload);
-        OneTimeTask<Notification> notificationOneTimeTask = Tasks.oneTime(notification.getSubjectId() + notification.getRecepient(), Notification.class).execute(
-                (inst, ctx) -> {
-                    CcsClientWrapper.getInstance().sendNotification(inst.getData());
-                }
-        );
+        scheduler.schedule(notificationOneTimeTask.instance(notification.getRecepient() + UUID.randomUUID(), notification), notification.getScheduledTime().toInstant());
+        logger.info("Task scheduled for notification {}", notification);
     }
 
     @Override
     public void cancel(String from) {
-        // TODO remove notifications from database and cancel
+        // TODO add the subject ID in the task instance id
+        scheduler.getScheduledExecutions(taskScheduledExecution -> {
+            if(taskScheduledExecution.getTaskInstance().getId().contains(from)) {
+                logger.info("Removing the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
+                scheduler.cancel(taskScheduledExecution.getTaskInstance());
+            }
+        });
     }
 
     @Override
@@ -119,5 +138,10 @@ public class DatabaseNotificationSchedulerService implements NotificationSchedul
 
     public DatabaseNotificationSchedulerService getInstance() {
         return null;
+    }
+
+    public static long getDuration(Date future) {
+        Date now = new Date();
+        return future.getTime() - now.getTime();
     }
 }
