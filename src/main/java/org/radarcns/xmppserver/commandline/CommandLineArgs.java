@@ -16,10 +16,6 @@ public class CommandLineArgs {
     @Parameter(names = { "-k", "--server-key" }, description = "Server Key of the FCM project on Firebase.")
     public static String serverKey = null;
 
-    // Default set to false because causes loss of records from Biovotion data. https://github.com/RADAR-base/Restructure-HDFS-topic/issues/16
-    @Parameter(names = { "-t", "--token" }, description = "The default receipient token to send downstream messages to. This is optional as the app recreated the token from the upstream messgaes it receives.")
-    public static String token = "dummyToken";
-
     @Parameter(names = { "-ns", "--notification-scheduler" }, description = "The notification scheduler to use with the 'SCHEDULE' action. Options are- simple, in-memory, persistent")
     public static String schedulerType = Config.SCHEDULER_SIMPLE;
 

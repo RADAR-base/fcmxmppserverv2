@@ -24,7 +24,7 @@ public class EntryPoint extends CcsClient {
 
     protected static final Logger logger = LoggerFactory.getLogger(EntryPoint.class);
 
-    private EntryPoint(String projectId, String apiKey, boolean debuggable, String toRegId, String schedulerType) {
+    private EntryPoint(String projectId, String apiKey, boolean debuggable, String schedulerType) {
         super(projectId, apiKey, debuggable, schedulerType);
 
         try {
@@ -88,7 +88,8 @@ public class EntryPoint extends CcsClient {
                 System.getenv("RADAR_XMPP_DB_PASS") : commandLineArgs.dbPass;
 
 
-        if(commandLineArgs.dbPath == null || commandLineArgs.dbPath.isEmpty()) {
+        if(! commandLineArgs.schedulerType.equals(Config.SCHEDULER_SIMPLE)
+                && (commandLineArgs.dbPath == null || commandLineArgs.dbPath.isEmpty())) {
             switch (commandLineArgs.schedulerType) {
                 case Config.SCHEDULER_MEM:
                     commandLineArgs.dbPath = "notificationDB";
@@ -100,12 +101,14 @@ public class EntryPoint extends CcsClient {
             }
         }
 
-        if(commandLineArgs.sender == null || commandLineArgs.serverKey == null) {
+        if(commandLineArgs.sender == null || commandLineArgs.sender.isEmpty()
+                || commandLineArgs.serverKey == null || commandLineArgs.serverKey.isEmpty()) {
             parser.usage();
-            logger.error("ERROR: Please specify the SENDER KEY and SERVER KEY either via commandline args or via environment variables");
+            logger.error("ERROR: Please specify the SENDER KEY and SERVER KEY " +
+                    "either via commandline args or via environment variables. Use -h or --help for more info.");
         }
 
-        new EntryPoint(commandLineArgs.sender, commandLineArgs.serverKey, false, commandLineArgs.token, commandLineArgs.schedulerType);
+        new EntryPoint(commandLineArgs.sender, commandLineArgs.serverKey, false, commandLineArgs.schedulerType);
     }
 
 }

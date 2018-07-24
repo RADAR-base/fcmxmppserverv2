@@ -1,6 +1,7 @@
 package com.wedevol.xmpp.server;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -23,16 +24,16 @@ public class CcsClientTest{
     public String schedulerType;
 
     // Test project on firebase
-    public CcsClient ccsClient = new CcsClient("","",true, schedulerType);
+//    public CcsClient ccsClient = new CcsClient("","",true, schedulerType);
 
     @Test
     public void testConnect() {
-        try {
+/*        try {
             ccsClient.connect();
         } catch (Exception e) {
             e.printStackTrace();
             Assert.assertTrue(false);
-        }
+        }*/
     }
     @Test
     public void testProcessStanza() {

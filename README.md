@@ -1,7 +1,7 @@
 #Important Info
 
-This repository is an extended version of [FCM XMPP Connection Server 2](https://github.com/carlosCharz/fcmxmppserverv2) (its fork) which adds support for scheduling notifications for clients which send the details of the notifications to be scheduled via a FCM upstream message. The corresponding android client is located at [FCM Test Android Client](https://github.com/yatharthranjan/FCMTest)
-The following chnages have been introduced -
+This repository is an extended version of [FCM XMPP Connection Server 2](https://github.com/carlosCharz/fcmxmppserverv2) (its fork) which adds support for scheduling notifications for clients which send the details of the notifications to be scheduled via a FCM upstream message. The corresponding android client is located at [FCM Test Android Client](https://github.com/yatharthranjan/FCMTest) and the cordova client is located at [Cordova client](https://github.com/yatharthranjan/cordova-notification-test) which uses this [fcm plugin](https://github.com/yatharthranjan/cordova-plugin-fcm) 
+The following changes have been introduced -
 
 1. The maven build has been converted to a gradle build and several improvements to the build process.
 2. Added a command line parser for arguments and also looks in environment variables for these values.
@@ -28,7 +28,7 @@ The following chnages have been introduced -
     ```
     Then you can just run the jar file generated or any of the distribution files with -h or --help option to display the usage -
     ```shell
-    java -jar xmppserver2-all-1.0.2.jar -help
+    java -jar radar-xmppserver-all-1.0.2.jar --help
     ```
     
     or install package into `/usr/local` using the distribution
@@ -58,7 +58,45 @@ The following chnages have been introduced -
     }
 
     ```
-7. TODO -- ADD DOCKERFILE AND ITS INFORMATION
+7. A Dockerfile is also included with the project for running the server in a docker container.
+   Build the docker image by running the following in the root directory - 
+   ```bash
+   docker build -t "radarbase/radar-xmppserver:1.0.2" .
+   ```
+   Then run the container like to get all the available options -
+   ```bash
+    docker run radarbase/radar-xmppserver:1.0.2 --help
+    ```
+    Then run with the options - 
+    ```bash
+    docker run radarbase/radar-xmppserver:1.0.2 [Options]
+    ```
+
+8. Using it with docker-compose is also possible. Just add the following to the docker-compose.yml file under the services tag -
+
+    ```yaml
+    ...
+      xmppserver:
+        image: radarbase/radar-xmppserver:1.0.2
+        restart: always
+        environment:
+          RADAR_XMPP_FCM_SENDER_KEY: <your-sender-key>
+          RADAR_XMPP_FCM_SERVER_KEY: <your-fcm-server-key>
+          RADAR_XMPP_SCHEDULER_TYPE: <scheduler-type>
+     ...
+    ```
+    OR
+    
+    ```yaml
+    ...
+      xmppserver:
+        image: radarbase/radar-xmppserver:1.0.2
+        restart: always
+        command: -s <sender-id> -k <server-key> -ns <notification-scheduler-type> ...
+     ...
+    ```
+9. As seen above the options can be either set as command line args or as environment variables. The docker image is also published on Docker hub [radarbase/radar-xmppserver:1.0.2](// TODO add to docker hub automatic builds)
+
 
 # Old README from base
 

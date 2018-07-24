@@ -22,7 +22,7 @@ COPY ./gradle /code/gradle
 COPY ./gradlew /code/
 RUN ./gradlew --version
 
-COPY ./build.gradle ./gradle.properties ./settings.gradle /code/
+COPY ./build.gradle ./settings.gradle /code/
 
 RUN ./gradlew downloadDependencies copyDependencies startScripts
 
@@ -40,4 +40,4 @@ COPY --from=builder /code/build/third-party/* /usr/lib/
 COPY --from=builder /code/build/scripts/* /usr/bin/
 COPY --from=builder /code/build/libs/* /usr/lib/
 
-ENTRYPOINT ["xmppserver2"]
+ENTRYPOINT ["radar-xmppserver"]

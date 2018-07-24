@@ -83,6 +83,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
    * @param debuggable
    */
   protected CcsClient(String projectId, String apiKey, boolean debuggable, String schedulerType) {
+
     // Add FCM Packet Extension Provider
     ProviderManager.addExtensionProvider(Util.FCM_ELEMENT_NAME, Util.FCM_NAMESPACE,
         new ExtensionElementProvider<FcmPacketExtension>() {
@@ -99,7 +100,9 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
 
     this.schedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
 
-    Instance = this;
+    if(Instance == null){
+      Instance = this;
+    }
   }
 
 
