@@ -99,6 +99,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     this.username = projectId + "@" + Util.FCM_SERVER_AUTH_CONNECTION;
 
     this.schedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
+    logger.info("Using Scheduler Service of type : {}", this.schedulerService.getClass().getName());
+
 
     if(Instance == null){
       Instance = this;
@@ -316,23 +318,16 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         }
         break;
 
+      case Util.BACKEND_ACTION_UPDATE_TOKEN:
+        schedulerService.updateToken(inMessage.getDataPayload().get("oldToken"),
+                inMessage.getDataPayload().get("newToken"));
+        break;
+
         default:
           logger.warn("Wrong action specified : " + action);
           throw new IllegalStateException("Wrong action specified, Options: 'ECHO', 'MESSAGE', 'SCHEDULE', 'CANCEL'");
 
     }
-/*    if (action.equals(Util.BACKEND_ACTION_ECHO)) { // send a message to the sender (user itself)
-      final String messageId = Util.getUniqueMessageId();
-      final String to = inMessage.getFrom();
-
-      final CcsOutMessage outMessage = new CcsOutMessage(to, messageId, inMessage.getDataPayload());
-      final String jsonRequest = MessageMapper.toJsonString(outMessage);
-      sendDownstreamMessage(messageId, jsonRequest);
-    } else if (action.equals(Util.BACKEND_ACTION_MESSAGE)) { // send a message to the recipient
-      this.handlePacketRecieved(inMessage);
-    } else if (action.equals(Util.BACKEND_ACTION_SCHEDULE)) { // schedule a notification in the future
-      notificationSchedulerService.scheduleNotificationForDate(inMessage.getFrom(), inMessage.getDataPayload());
-    }*/
   }
 
   /**

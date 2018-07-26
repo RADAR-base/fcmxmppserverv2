@@ -13,7 +13,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     private HashMap<String, HashSet<ScheduleTask<Notification>>> scheduleTaskHashMap;
 
     // Singleton class. We only want one scheduler service running.
-    private static SimpleNotificationSchedulerService INSTANCE = null;
+    private static SimpleNotificationSchedulerService instance = null;
 
     private boolean isRunning = false;
 
@@ -42,11 +42,11 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
         }
     }
 
-    public static NotificationSchedulerService getINSTANCE() {
-        if(INSTANCE == null) {
-            INSTANCE = new SimpleNotificationSchedulerService();
+    public static NotificationSchedulerService getInstance() {
+        if(instance == null) {
+            instance = new SimpleNotificationSchedulerService();
         }
-        return INSTANCE;
+        return instance;
     }
 
     @Override

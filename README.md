@@ -14,13 +14,13 @@ The following changes have been introduced -
             "notificationMessage":"hello",
             "action":"SCHEDULE",
             "time":"1531482349791",
-            "subjectId":"test"
-            
-            // TODO add timeTolive or expiry
+            "subjectId":"test",
+            "ttlSeconds":""
          },
          ...
     }
     ```
+    If `ttlSeconds` is not specified the default is set to 28 days. Note that the `time` parameter is in milliseconds (from epoch time) while the `ttlSeconds` is in seconds as apparent from its name.
 4. Currently it supports 3 types of schedulers - simple, in-memory and persistent. As the name suggests, simple is just a java thread based scheduler without any DB, in-memory uses an instance of in-memory database and persistent writes database files to disk. We use the HyperSQL DB or HSQL in short as it supports both in memory and persistent options.
 5. To locally build the server and run it - 
     ```shell
@@ -83,6 +83,9 @@ The following changes have been introduced -
           RADAR_XMPP_FCM_SENDER_KEY: <your-sender-key>
           RADAR_XMPP_FCM_SERVER_KEY: <your-fcm-server-key>
           RADAR_XMPP_SCHEDULER_TYPE: <scheduler-type>
+          RADAR_XMPP_DB_PATH: <db-path(if using db scheduler)>
+        volumes:
+          - ./myhostdir/hsql/:/usr/hsql/
      ...
     ```
     OR
@@ -93,9 +96,12 @@ The following changes have been introduced -
         image: radarbase/radar-xmppserver:1.0.2
         restart: always
         command: -s <sender-id> -k <server-key> -ns <notification-scheduler-type> ...
+        volumes:
+          - ./myhostdir/hsql/:/usr/hsql/
      ...
     ```
 9. As seen above the options can be either set as command line args or as environment variables. The docker image is also published on Docker hub [radarbase/radar-xmppserver:1.0.2](// TODO add to docker hub automatic builds)
+   Also make sure to mount the path of the db as a bind mount to host if using a persistent db otherwise all data will be lost if the container is removed.
 
 
 # Old README from base
