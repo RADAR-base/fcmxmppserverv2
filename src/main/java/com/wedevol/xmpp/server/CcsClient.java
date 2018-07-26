@@ -34,6 +34,8 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smackx.ping.PingFailedListener;
 import org.jivesoftware.smackx.ping.PingManager;
+import org.radarcns.xmppserver.factory.SchedulerServiceFactory;
+import org.radarcns.xmppserver.service.NotificationSchedulerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParser;
@@ -51,7 +53,7 @@ import com.wedevol.xmpp.util.Util;
  * has been taken more or less verbatim from Google's documentation: <a href=
  * "https://firebase.google.com/docs/cloud-messaging/xmpp-server-ref">https://firebase.google.com/docs/cloud-messaging/xmpp-server-ref</a>
  * 
- * @author Charz++
+ * @author yatharthranjan
  */
 public class CcsClient implements StanzaListener, ReconnectionListener, ConnectionListener, PingFailedListener {
 
@@ -69,6 +71,10 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
   // messages from backoff failures
   private final Map<String, Message> pendingMessages = new ConcurrentHashMap<>();
 
+  private NotificationSchedulerService schedulerService;
+
+  private static CcsClient Instance = null;
+
   /**
    * Public constructor for the CCS Client
    * 
@@ -76,8 +82,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
    * @param apiKey
    * @param debuggable
    */
+  protected CcsClient(String projectId, String apiKey, boolean debuggable, String schedulerType) {
 
-  public CcsClient(String projectId, String apiKey, boolean debuggable) {
     // Add FCM Packet Extension Provider
     ProviderManager.addExtensionProvider(Util.FCM_ELEMENT_NAME, Util.FCM_NAMESPACE,
         new ExtensionElementProvider<FcmPacketExtension>() {
@@ -91,6 +97,22 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     this.apiKey = apiKey;
     this.debuggable = debuggable;
     this.username = projectId + "@" + Util.FCM_SERVER_AUTH_CONNECTION;
+
+    this.schedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
+    logger.info("Using Scheduler Service of type : {}", this.schedulerService.getClass().getName());
+
+
+    if(Instance == null){
+      Instance = this;
+    }
+  }
+
+
+  public static CcsClient getInstance() {
+    if (Instance == null) {
+      throw new IllegalStateException("CcsClient must first be instantiated possibly by a sub-class");
+    }
+    return Instance;
   }
 
   /**
@@ -156,6 +178,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
 
     xmppConn.login(username, apiKey);
     logger.info("User logged in: {}", username);
+
+    this.schedulerService.start();
   }
 
   /**
@@ -257,7 +281,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     final Optional<String> actionObj =
         Optional.ofNullable(inMessage.getDataPayload().get(Util.PAYLOAD_ATTRIBUTE_ACTION));
     if (!actionObj.isPresent()) {
-      throw new IllegalStateException("Action must not be null! Options: 'ECHO', 'MESSAGE'");
+      throw new IllegalStateException("Action must not be null! Options: 'ECHO', 'MESSAGE', 'SCHEDULE', 'CANCEL'");
     }
     final String action = actionObj.get();
 
@@ -266,15 +290,43 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     sendAck(ackJsonRequest);
 
     // 2. process and send message
-    if (action.equals(Util.BACKEND_ACTION_ECHO)) { // send a message to the sender (user itself)
-      final String messageId = Util.getUniqueMessageId();
-      final String to = inMessage.getFrom();
 
-      final CcsOutMessage outMessage = new CcsOutMessage(to, messageId, inMessage.getDataPayload());
-      final String jsonRequest = MessageMapper.toJsonString(outMessage);
-      sendDownstreamMessage(messageId, jsonRequest);
-    } else if (action.equals(Util.BACKEND_ACTION_MESSAGE)) { // send a message to the recipient
-      this.handlePacketRecieved(inMessage);
+    switch(action) {
+      case Util.BACKEND_ACTION_ECHO:
+        final String messageId = Util.getUniqueMessageId();
+        final String to = inMessage.getFrom();
+
+        final CcsOutMessage outMessage = new CcsOutMessage(to, messageId, inMessage.getDataPayload());
+        final String jsonRequest = MessageMapper.toJsonString(outMessage);
+        sendDownstreamMessage(inMessage.getFrom(), jsonRequest);
+        break;
+
+      case Util.BACKEND_ACTION_MESSAGE:
+        this.handlePacketRecieved(inMessage);
+        break;
+
+      case Util.BACKEND_ACTION_SCHEDULE:
+        if(!schedulerService.isRunning()) {
+          schedulerService.start();
+        }
+        schedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
+        break;
+
+      case Util.BACKEND_ACTION_CANCEL:
+        if(inMessage.getDataPayload().get("cancelType").equals("all")) {
+          schedulerService.cancel(inMessage.getFrom());
+        }
+        break;
+
+      case Util.BACKEND_ACTION_UPDATE_TOKEN:
+        schedulerService.updateToken(inMessage.getDataPayload().get("oldToken"),
+                inMessage.getDataPayload().get("newToken"));
+        break;
+
+        default:
+          logger.warn("Wrong action specified : " + action);
+          throw new IllegalStateException("Wrong action specified, Options: 'ECHO', 'MESSAGE', 'SCHEDULE', 'CANCEL'");
+
     }
   }
 
@@ -443,6 +495,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     putMessageToSyncMessages(messageId, jsonRequest);
     if (!isConnectionDraining) {
       sendDownstreamMessageInternal(messageId, jsonRequest);
+    } else {
+      logger.warn("Cannot send downstream message, Connection is draining");
     }
   }
 
@@ -519,6 +573,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         backoff.errorOccured();
       }
     }
+    schedulerService.start();
   }
 
   private void sendQueuedMessages() {
@@ -562,6 +617,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
       logger.info("Disconnecting the xmpp server from FCM.");
       xmppConn.disconnect();
     }
+
+      schedulerService.stop();
   }
 
   public void disconnectGracefully() {
@@ -570,6 +627,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
       logger.info("Disconnecting the xmpp server from FCM");
       xmppConn.disconnect(); // this method call the onClosed listener because it have not been detached
     }
+      schedulerService.stop();
   }
 
   /*** END: Methods for the Manager ***/

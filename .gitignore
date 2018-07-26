@@ -33,6 +33,11 @@ target
 release.properties
 pom.xml.*
 
+#Gradle
+.gradle
+out
+build
+
 #Ant
 build.xml
 ant.properties
