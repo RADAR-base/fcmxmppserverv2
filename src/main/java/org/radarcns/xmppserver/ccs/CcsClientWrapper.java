@@ -1,12 +1,10 @@
 package org.radarcns.xmppserver.ccs;
 
-import com.wedevol.xmpp.EntryPoint;
 import com.wedevol.xmpp.bean.CcsOutMessage;
 import com.wedevol.xmpp.server.CcsClient;
 import com.wedevol.xmpp.util.MessageMapper;
 import org.radarcns.xmppserver.model.Notification;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 

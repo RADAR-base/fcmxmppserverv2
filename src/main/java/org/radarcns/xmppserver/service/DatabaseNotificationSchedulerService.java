@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
-import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,16 +24,13 @@ import java.util.UUID;
 public class DatabaseNotificationSchedulerService implements NotificationSchedulerService {
 
     private Scheduler scheduler;
-
     private BasicDataSource basicDataSource;
-
-    OneTimeTask<Notification> notificationOneTimeTask;
+    private OneTimeTask<Notification> notificationOneTimeTask;
 
     private static final String TASK_NAME = "notification-one-time";
+    private static final Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
 
     private static DatabaseNotificationSchedulerService INSTANCE = null;
-
-    Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
 
     private DatabaseNotificationSchedulerService(DbConfig dbConfig) {
         this.basicDataSource = new BasicDataSource();
@@ -128,20 +124,17 @@ public class DatabaseNotificationSchedulerService implements NotificationSchedul
 
     @Override
     public void updateToken(String oldToken, String newToken) {
-
+        scheduler.getScheduledExecutions(taskScheduledExecution -> {
+            if(taskScheduledExecution.getTaskInstance().getId().contains(oldToken)) {
+                logger.info("Updating token on the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
+                Notification notification = (Notification)(taskScheduledExecution.getData());
+                notification.setRecepient(newToken);
+            }
+        });
     }
 
     @Override
     public boolean isRunning() {
         return false;
-    }
-
-    public DatabaseNotificationSchedulerService getInstance() {
-        return null;
-    }
-
-    public static long getDuration(Date future) {
-        Date now = new Date();
-        return future.getTime() - now.getTime();
     }
 }

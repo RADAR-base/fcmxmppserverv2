@@ -1,19 +1,16 @@
 package org.radarcns.xmppserver.service;
 
-import com.wedevol.xmpp.server.CcsClient;
 import org.radarcns.xmppserver.model.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 
 public class SimpleNotificationSchedulerService implements NotificationSchedulerService{
 
     protected static final Logger logger = LoggerFactory.getLogger(SimpleNotificationSchedulerService.class);
-    private HashMap<String, HashSet<ScheduledFuture<?>>> scheduledFutureHashMap;
+    private HashMap<String, HashSet<ScheduleTask<Notification>>> scheduleTaskHashMap;
 
     // Singleton class. We only want one scheduler service running.
     private static SimpleNotificationSchedulerService INSTANCE = null;
@@ -22,26 +19,26 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     private void scheduleNotificationForDate(String from, Map<String, String> payload) {
         Notification notification = Notification.getNotification(from, payload);
-        ScheduledFuture scheduledFuture = ScheduleTask.scheduleForDate(notification);
+        ScheduleTask<Notification> notificationScheduleTask = new ScheduleTask<>(notification).scheduleForDate();
 
         logger.info(notification.toString());
-        logger.info("" + scheduledFuture.getDelay(TimeUnit.MILLISECONDS));
 
-        if (scheduledFutureHashMap.containsKey(from)) {
-            if (! scheduledFutureHashMap.get(from).contains(scheduledFuture)) {
-                scheduledFutureHashMap.get(from).add(scheduledFuture);
+        if (scheduleTaskHashMap.containsKey(from)) {
+            if (! scheduleTaskHashMap.get(from).contains(notificationScheduleTask)) {
+                scheduleTaskHashMap.get(from).add(notificationScheduleTask);
             }
         } else {
-            HashSet<ScheduledFuture<?>> newHashSet = new HashSet<>();
-            newHashSet.add(scheduledFuture);
+            HashSet<ScheduleTask<Notification>> newHashSet = new HashSet<>();
+            newHashSet.add(notificationScheduleTask);
 
-            scheduledFutureHashMap.put(from, newHashSet);
+            scheduleTaskHashMap.put(from, newHashSet);
         }
     }
 
     private void cancelAllNotificationsForToken(String token) {
-        if (scheduledFutureHashMap.containsKey(token)) {
-            scheduledFutureHashMap.get(token).forEach(s -> s.cancel(true));
+        if (scheduleTaskHashMap.containsKey(token)) {
+            scheduleTaskHashMap.get(token).forEach(s -> s.getScheduledFuture().cancel(true));
+            scheduleTaskHashMap.remove(token);
         }
     }
 
@@ -55,7 +52,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     @Override
     public void start() {
         if(!isRunning) {
-            scheduledFutureHashMap = new HashMap<>();
+            scheduleTaskHashMap = new HashMap<>();
             isRunning = true;
         } else {
             logger.warn("Cannot start an instance of {} when it is already running.", SimpleNotificationSchedulerService.class.getName());
@@ -66,7 +63,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     public void stop() {
         if(!isRunning) {
             // Stop all scheduled tasks
-            for (String token : scheduledFutureHashMap.keySet()) {
+            for (String token : scheduleTaskHashMap.keySet()) {
                 cancelAllNotificationsForToken(token);
             }
         } else {
@@ -91,7 +88,9 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     @Override
     public void updateToken(String oldToken, String newToken) {
         //TODO Add update logic
-
+        if (scheduleTaskHashMap.containsKey(oldToken)) {
+            scheduleTaskHashMap.get(oldToken).forEach(s -> s.getData().setRecepient(newToken));
+        }
     }
 
     @Override

@@ -46,6 +46,10 @@ public class Notification implements Serializable{
         return subjectId;
     }
 
+    public void setRecepient(String recepient) {
+        this.recepient = recepient;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
