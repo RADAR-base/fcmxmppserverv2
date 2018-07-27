@@ -320,7 +320,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
 
       case Util.BACKEND_ACTION_UPDATE_TOKEN:
-        // New Token will be the id the message is sent from.
+        // New Token will be the token id the message is sent from.
         notificationSchedulerService.updateToken(inMessage.getDataPayload().get("oldToken"),
                 inMessage.getFrom());
         break;

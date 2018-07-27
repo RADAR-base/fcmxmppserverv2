@@ -17,7 +17,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     private boolean isRunning = false;
 
-    private void scheduleNotificationForDate(String from, Map<String, String> payload) {
+    private synchronized void scheduleNotificationForDate(String from, Map<String, String> payload) {
         Notification notification = Notification.getNotification(from, payload);
         ScheduleTask<Notification> notificationScheduleTask = new ScheduleTask<>(notification).scheduleForDate();
 
@@ -35,7 +35,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
         }
     }
 
-    private void cancelAllNotifications(String partOfKey) {
+    private synchronized void cancelAllNotifications(String partOfKey) {
         for(String key: scheduleTaskHashMap.keySet()) {
             if(key.contains(partOfKey)) {
                 scheduleTaskHashMap.get(key).forEach(s -> s.getScheduledFuture().cancel(true));

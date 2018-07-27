@@ -25,17 +25,17 @@ public class CcsClientWrapper {
         return CcsClientWrapperInstance;
     }
 
-    public void sendNotification(Notification notification) {
-        final String messageId = String.valueOf(notification.hashCode());
-        final CcsOutMessage outMessage = new CcsOutMessage(notification.getRecepient(),
-                messageId, notification.toMap());
+    public <T extends Notification> void sendNotification(T t) {
+        final String messageId = String.valueOf(t.hashCode());
+        final CcsOutMessage outMessage = new CcsOutMessage(t.getRecepient(),
+                messageId, t.toMap());
 
         Map<String, String> notifyMap = new HashMap<>();
-        notifyMap.put("title", notification.getTitle());
-        notifyMap.put("body", notification.getMessage());
+        notifyMap.put("title", t.getTitle());
+        notifyMap.put("body", t.getMessage());
 
         outMessage.setNotificationPayload(notifyMap);
-        outMessage.setTimeToLive(notification.getTtlSeconds());
+        outMessage.setTimeToLive(t.getTtlSeconds());
 
         final String jsonRequest = MessageMapper.toJsonString(outMessage);
         ccsClient.sendDownstreamMessage(messageId, jsonRequest);

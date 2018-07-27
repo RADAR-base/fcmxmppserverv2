@@ -32,6 +32,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     private boolean isRunning = false;
 
     private static final String TASK_NAME = "notification-one-time";
+    private static final String TASK_ID_DELIMITER = "";
     private static final Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
 
     DatabaseNotificationSchedulerService(String type) {
@@ -67,8 +68,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                                         ")");
 
             } catch (SQLException e) {
+                logger.error("Cannot start the service {} due to {}", this.getClass().getName(), e);
                 e.printStackTrace();
-                stop();
             }
             notificationOneTimeTask = Tasks.oneTime(TASK_NAME, Notification.class).execute(
                     (inst, ctx) -> {
@@ -112,10 +113,16 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public void schedule(String from, Map<String, String> payload) {
-        // TODO add delimter in taskId and split for individual ids
         if(isRunning) {
             Notification notification = Notification.getNotification(from, payload);
-            String taskId = notification.getRecepient() + notification.getSubjectId() + UUID.randomUUID();
+
+            // Task id consists of 3 parts -- The FCM token, the subjectID (or any other custom ID)
+            // and a UUID to make the task unique
+            String taskId= notification.getRecepient() +
+                    TASK_ID_DELIMITER +
+                    notification.getSubjectId() +
+                    TASK_ID_DELIMITER +
+                    UUID.randomUUID();
             scheduler.schedule(notificationOneTimeTask.instance(taskId, notification), notification.getScheduledTime().toInstant());
             logger.info("Task scheduled for notification {}", notification);
         } else {
@@ -125,18 +132,25 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public void cancelUsingFcmToken(String from) {
-        cancelAllTasks(from);
+        if(isRunning) {
+            scheduler.getScheduledExecutions(taskScheduledExecution -> {
+                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(TASK_ID_DELIMITER);
+                if (ids.length == 3 && from.equals(ids[0])) {
+                    logger.info("Removing the scheduled task for id {}", ids[0]);
+                    scheduler.cancel(taskScheduledExecution.getTaskInstance());
+                }
+            });
+        } else {
+            logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
+        }
     }
 
     @Override
     public void cancelUsingCustomId(String id) {
-        cancelAllTasks(id);
-    }
-
-    private void cancelAllTasks(String partTaskId) {
         if(isRunning) {
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
-                if (taskScheduledExecution.getTaskInstance().getId().contains(partTaskId)) {
+                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(TASK_ID_DELIMITER);
+                if (ids.length == 3 && id.equals(ids[1])) {
                     logger.info("Removing the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
@@ -145,6 +159,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
     }
+
 
     @Override
     public void updateToken(String oldToken, String newToken) {
