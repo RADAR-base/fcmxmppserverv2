@@ -100,7 +100,7 @@ The following changes have been introduced -
           - ./myhostdir/hsql/:/usr/hsql/
      ...
     ```
-9. As seen above the options can be either set as command line args or as environment variables. The docker image is also published on Docker hub [radarbase/radar-xmppserver:1.0.2](// TODO add to docker hub automatic builds)
+9. As seen above the options can be either set as command line args or as environment variables. The docker image is also published on Docker hub [radarbase/radar-xmppserver](https://hub.docker.com/r/radarbase/fcmxmppserverv2/).
    Also make sure to mount the path of the db as a bind mount to host if using a persistent db otherwise all data will be lost if the container is removed.
 
 

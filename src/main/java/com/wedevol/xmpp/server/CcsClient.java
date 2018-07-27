@@ -71,7 +71,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
   // messages from backoff failures
   private final Map<String, Message> pendingMessages = new ConcurrentHashMap<>();
 
-  private NotificationSchedulerService schedulerService;
+  private NotificationSchedulerService notificationSchedulerService;
 
   private static CcsClient Instance = null;
 
@@ -98,8 +98,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     this.debuggable = debuggable;
     this.username = projectId + "@" + Util.FCM_SERVER_AUTH_CONNECTION;
 
-    this.schedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
-    logger.info("Using Scheduler Service of type : {}", this.schedulerService.getClass().getName());
+    this.notificationSchedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
+    logger.info("Using Scheduler Service of type : {}", this.notificationSchedulerService.getClass().getName());
 
 
     if(Instance == null){
@@ -179,7 +179,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     xmppConn.login(username, apiKey);
     logger.info("User logged in: {}", username);
 
-    this.schedulerService.start();
+    this.notificationSchedulerService.start();
   }
 
   /**
@@ -306,21 +306,23 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
 
       case Util.BACKEND_ACTION_SCHEDULE:
-        if(!schedulerService.isRunning()) {
-          schedulerService.start();
+        if(!notificationSchedulerService.isRunning()) {
+          notificationSchedulerService.start();
         }
-        schedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
+        notificationSchedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
         break;
 
       case Util.BACKEND_ACTION_CANCEL:
         if(inMessage.getDataPayload().get("cancelType").equals("all")) {
-          schedulerService.cancel(inMessage.getFrom());
+          notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
+          notificationSchedulerService.cancelUsingCustomId(inMessage.getDataPayload().get("subjectId"));
         }
         break;
 
       case Util.BACKEND_ACTION_UPDATE_TOKEN:
-        schedulerService.updateToken(inMessage.getDataPayload().get("oldToken"),
-                inMessage.getDataPayload().get("newToken"));
+        // New Token will be the id the message is sent from.
+        notificationSchedulerService.updateToken(inMessage.getDataPayload().get("oldToken"),
+                inMessage.getFrom());
         break;
 
         default:
@@ -573,7 +575,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         backoff.errorOccured();
       }
     }
-    schedulerService.start();
+    notificationSchedulerService.start();
   }
 
   private void sendQueuedMessages() {
@@ -618,7 +620,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
       xmppConn.disconnect();
     }
 
-      schedulerService.stop();
+      notificationSchedulerService.stop();
   }
 
   public void disconnectGracefully() {
@@ -627,7 +629,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
       logger.info("Disconnecting the xmpp server from FCM");
       xmppConn.disconnect(); // this method call the onClosed listener because it have not been detached
     }
-      schedulerService.stop();
+      notificationSchedulerService.stop();
   }
 
   /*** END: Methods for the Manager ***/

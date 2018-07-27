@@ -31,14 +31,16 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
             HashSet<ScheduleTask<Notification>> newHashSet = new HashSet<>();
             newHashSet.add(notificationScheduleTask);
 
-            scheduleTaskHashMap.put(from, newHashSet);
+            scheduleTaskHashMap.put(from + notification.getSubjectId(), newHashSet);
         }
     }
 
-    private void cancelAllNotificationsForToken(String token) {
-        if (scheduleTaskHashMap.containsKey(token)) {
-            scheduleTaskHashMap.get(token).forEach(s -> s.getScheduledFuture().cancel(true));
-            scheduleTaskHashMap.remove(token);
+    private void cancelAllNotifications(String partOfKey) {
+        for(String key: scheduleTaskHashMap.keySet()) {
+            if(key.contains(partOfKey)) {
+                scheduleTaskHashMap.get(key).forEach(s -> s.getScheduledFuture().cancel(true));
+                scheduleTaskHashMap.remove(key);
+            }
         }
     }
 
@@ -63,8 +65,9 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     public void stop() {
         if(!isRunning) {
             // Stop all scheduled tasks
-            for (String token : scheduleTaskHashMap.keySet()) {
-                cancelAllNotificationsForToken(token);
+            for (String key : scheduleTaskHashMap.keySet()) {
+                scheduleTaskHashMap.get(key).forEach(s -> s.getScheduledFuture().cancel(true));
+                scheduleTaskHashMap.remove(key);
             }
         } else {
             logger.warn("Cannot stop an instance of {} when it is not running.", SimpleNotificationSchedulerService.class.getName());
@@ -81,8 +84,13 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     }
 
     @Override
-    public void cancel(String from) {
-        cancelAllNotificationsForToken(from);
+    public void cancelUsingFcmToken(String from) {
+        cancelAllNotifications(from);
+    }
+
+    @Override
+    public void cancelUsingCustomId(String id) {
+        cancelAllNotifications(id);
     }
 
     @Override

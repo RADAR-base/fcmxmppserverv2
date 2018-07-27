@@ -112,10 +112,11 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public void schedule(String from, Map<String, String> payload) {
+        // TODO add delimter in taskId and split for individual ids
         if(isRunning) {
-            // TODO add subject ID in the task instance id
             Notification notification = Notification.getNotification(from, payload);
-            scheduler.schedule(notificationOneTimeTask.instance(notification.getRecepient() + notification.getSubjectId() + UUID.randomUUID(), notification), notification.getScheduledTime().toInstant());
+            String taskId = notification.getRecepient() + notification.getSubjectId() + UUID.randomUUID();
+            scheduler.schedule(notificationOneTimeTask.instance(taskId, notification), notification.getScheduledTime().toInstant());
             logger.info("Task scheduled for notification {}", notification);
         } else {
             logger.warn("Cannot schedule using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
@@ -123,24 +124,31 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     }
 
     @Override
-    public void cancel(String from) {
+    public void cancelUsingFcmToken(String from) {
+        cancelAllTasks(from);
+    }
+
+    @Override
+    public void cancelUsingCustomId(String id) {
+        cancelAllTasks(id);
+    }
+
+    private void cancelAllTasks(String partTaskId) {
         if(isRunning) {
-            // TODO add the subject ID in the task instance id
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
-                if (taskScheduledExecution.getTaskInstance().getId().contains(from)) {
+                if (taskScheduledExecution.getTaskInstance().getId().contains(partTaskId)) {
                     logger.info("Removing the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
         } else {
-            logger.warn("Cannot cancel using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
+            logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
     }
 
     @Override
     public void updateToken(String oldToken, String newToken) {
         if(isRunning) {
-
             // TODO update token based on subject id
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 if (taskScheduledExecution.getTaskInstance().getId().contains(oldToken)) {
