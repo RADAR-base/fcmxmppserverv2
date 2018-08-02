@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Database notification scheduler service class for the XMPP Server
@@ -32,7 +33,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     private boolean isRunning = false;
 
     private static final String TASK_NAME = "notification-one-time";
-    private static final String TASK_ID_DELIMITER = "";
+    private static final String TASK_ID_DELIMITER = "+";
     private static final Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
 
     DatabaseNotificationSchedulerService(String type) {
@@ -112,7 +113,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     }
 
     @Override
-    public void schedule(String from, Map<String, String> payload) {
+    public synchronized void schedule(String from, Map<String, String> payload) {
         if(isRunning) {
             Notification notification = Notification.getNotification(from, payload);
 
@@ -131,10 +132,10 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     }
 
     @Override
-    public void cancelUsingFcmToken(String from) {
+    public synchronized void cancelUsingFcmToken(String from) {
         if(isRunning) {
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
-                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(TASK_ID_DELIMITER);
+                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
                 if (ids.length == 3 && from.equals(ids[0])) {
                     logger.info("Removing the scheduled task for id {}", ids[0]);
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
@@ -146,10 +147,10 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     }
 
     @Override
-    public void cancelUsingCustomId(String id) {
+    public synchronized void cancelUsingCustomId(String id) {
         if(isRunning) {
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
-                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(TASK_ID_DELIMITER);
+                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
                 if (ids.length == 3 && id.equals(ids[1])) {
                     logger.info("Removing the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
@@ -162,7 +163,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
 
     @Override
-    public void updateToken(String oldToken, String newToken) {
+    public synchronized void updateToken(String oldToken, String newToken) {
         if(isRunning) {
             // TODO update token based on subject id
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
