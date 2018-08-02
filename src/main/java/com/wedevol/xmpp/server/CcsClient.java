@@ -170,7 +170,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     xmppConn.addConnectionListener(this);
 
     // Handle incoming packets and reject messages that are not from FCM CCS
-    xmppConn.addAsyncStanzaListener(this, stanza -> stanza.hasExtension(Util.FCM_ELEMENT_NAME, Util.FCM_NAMESPACE));
+    //xmppConn.addAsyncStanzaListener(this, stanza -> stanza.hasExtension(Util.FCM_ELEMENT_NAME, Util.FCM_NAMESPACE));
+    xmppConn.addSyncStanzaListener(this, stanza -> stanza.hasExtension(Util.FCM_ELEMENT_NAME, Util.FCM_NAMESPACE));
 
     // Log all outgoing packets
     xmppConn.addStanzaInterceptor(stanza -> logger.info("Sent: {}", stanza.toXML()), ForEveryStanza.INSTANCE);
@@ -318,17 +319,20 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
 
       case Util.BACKEND_ACTION_CANCEL:
         String type = inMessage.getDataPayload().get("cancelType");
-        if(type.equals("all")) {
-          notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
-          notificationSchedulerService.cancelUsingCustomId(inMessage.getDataPayload().get("subjectId"));
-        } else if(type.equals("id")) {
-          notificationSchedulerService.cancelUsingCustomId(inMessage.getDataPayload().get("subjectId"));
-        } else if(type.equals("token")) {
-          notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
-        } else {
-          logger.warn("No cancel type provided. Cancelling using the FCM token by default");
-          notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
-        }
+        // Use a new thread to gain a lock so other threads cannot schedule while this is cancelling
+        new Thread(() -> {
+          if(type.equals("all")) {
+            notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
+            notificationSchedulerService.cancelUsingCustomId(inMessage.getDataPayload().get("subjectId"));
+          } else if(type.equals("id")) {
+            notificationSchedulerService.cancelUsingCustomId(inMessage.getDataPayload().get("subjectId"));
+          } else if(type.equals("token")) {
+            notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
+          } else {
+            logger.warn("No cancel type provided. Cancelling using the FCM token by default");
+            notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
+          }
+        }).start();
         break;
 
       case Util.BACKEND_ACTION_UPDATE_TOKEN:

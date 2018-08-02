@@ -137,7 +137,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
                 if (ids.length == 3 && from.equals(ids[0])) {
-                    logger.info("Removing the scheduled task for id {}", ids[0]);
+                    logger.info("Removing the scheduled task for id {} from thread {} - {}", ids[0],
+                            Thread.currentThread().getName(), Thread.currentThread().getId());
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
@@ -152,7 +153,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
                 if (ids.length == 3 && id.equals(ids[1])) {
-                    logger.info("Removing the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
+                    logger.info("Removing the scheduled task with id {} from thread {} - {}", taskScheduledExecution.getTaskInstance().getId(),
+                            Thread.currentThread().getName(), Thread.currentThread().getId());
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
@@ -168,7 +170,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             // TODO update token based on subject id
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 if (taskScheduledExecution.getTaskInstance().getId().contains(oldToken)) {
-                    logger.info("Updating token on the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
+                    logger.info("Updating token on the scheduled task with id {} from thread {} - {}", taskScheduledExecution.getTaskInstance().getId(),
+                            Thread.currentThread().getName(), Thread.currentThread().getId());
                     Notification notification = (Notification) (taskScheduledExecution.getData());
                     if(notification.getRecepient().equals(oldToken)) {
                         notification.setRecepient(newToken);
