@@ -28,12 +28,12 @@ The following changes have been introduced -
     ```
     Then you can just run the jar file generated or any of the distribution files with -h or --help option to display the usage -
     ```shell
-    java -jar radar-xmppserver-all-1.0.2.jar --help
+    java -jar radar-xmppserver-all-0.1.0-SNAPSHOT.jar --help
     ```
     
     or install package into `/usr/local` using the distribution
     ```shell
-    sudo tar -xzf build/distributions/radar-xmppserver-1.0.2.tar.gz -C /usr/local --strip-components=1
+    sudo tar -xzf build/distributions/radar-xmppserver-0.1.0-SNAPSHOT.tar.gz -C /usr/local --strip-components=1
     ```
     Now you can run with command
     ```shell
@@ -61,15 +61,15 @@ The following changes have been introduced -
 7. A Dockerfile is also included with the project for running the server in a docker container.
    Build the docker image by running the following in the root directory - 
    ```bash
-   docker build -t "radarbase/radar-xmppserver:1.0.2" .
+   docker build -t "radarbase/radar-xmppserver:0.1.0" .
    ```
    Then run the container like to get all the available options -
    ```bash
-    docker run radarbase/radar-xmppserver:1.0.2 --help
+    docker run radarbase/radar-xmppserver:0.1.0 --help
     ```
     Then run with the options - 
     ```bash
-    docker run radarbase/radar-xmppserver:1.0.2 [Options]
+    docker run radarbase/radar-xmppserver:0.1.0 [Options]
     ```
 
 8. Using it with docker-compose is also possible. Just add the following to the docker-compose.yml file under the services tag -
@@ -77,7 +77,7 @@ The following changes have been introduced -
     ```yaml
     ...
       xmppserver:
-        image: radarbase/radar-xmppserver:1.0.2
+        image: radarbase/radar-xmppserver:0.1.0
         restart: always
         environment:
           RADAR_XMPP_FCM_SENDER_KEY: <your-sender-key>
@@ -93,7 +93,7 @@ The following changes have been introduced -
     ```yaml
     ...
       xmppserver:
-        image: radarbase/radar-xmppserver:1.0.2
+        image: radarbase/radar-xmppserver:0.1.0
         restart: always
         command: -s <sender-id> -k <server-key> -ns <notification-scheduler-type> ...
         volumes:

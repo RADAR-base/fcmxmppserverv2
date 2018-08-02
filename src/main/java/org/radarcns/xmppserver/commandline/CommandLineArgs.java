@@ -11,7 +11,7 @@ import org.radarcns.xmppserver.config.Config;
 public class CommandLineArgs {
 
     @Parameter(names = { "-s", "--sender-id" }, description = "Sender ID of the FCM project on Firebase.")
-    public static String sender = null;
+    public static String senderId = null;
 
     @Parameter(names = { "-k", "--server-key" }, description = "Server Key of the FCM project on Firebase.")
     public static String serverKey = null;

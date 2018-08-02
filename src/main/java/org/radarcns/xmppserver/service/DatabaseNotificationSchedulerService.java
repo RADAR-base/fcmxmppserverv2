@@ -55,7 +55,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                         .executeUpdate(
                                 "create table if not exists scheduled_tasks (\n" +
                                         "  task_name varchar(40) not null,\n" +
-                                        "  task_instance varchar(240) not null,\n" +
+                                        "  task_instance varchar(500) not null,\n" +
                                         "  task_data blob,\n" +
                                         "  execution_time timestamp(6) not null,\n" +
                                         "  picked BOOLEAN not null,\n" +

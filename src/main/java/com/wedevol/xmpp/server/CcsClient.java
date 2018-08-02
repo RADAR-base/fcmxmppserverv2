@@ -57,7 +57,7 @@ import com.wedevol.xmpp.util.Util;
  */
 public class CcsClient implements StanzaListener, ReconnectionListener, ConnectionListener, PingFailedListener {
 
-  protected static final Logger logger = LoggerFactory.getLogger(CcsClient.class);
+  private static final Logger logger = LoggerFactory.getLogger(CcsClient.class);
 
   private XMPPTCPConnection xmppConn;
   private String apiKey = null;
@@ -82,7 +82,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
    * @param apiKey
    * @param debuggable
    */
-  protected CcsClient(String projectId, String apiKey, boolean debuggable, String schedulerType) {
+  private CcsClient(String projectId, String apiKey, boolean debuggable, String schedulerType) {
 
     // Add FCM Packet Extension Provider
     ProviderManager.addExtensionProvider(Util.FCM_ELEMENT_NAME, Util.FCM_NAMESPACE,
@@ -101,16 +101,20 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     this.notificationSchedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
     logger.info("Using Scheduler Service of type : {}", this.notificationSchedulerService.getClass().getName());
 
+  }
 
-    if(Instance == null){
-      Instance = this;
+  public static void createInstance(String projectId, String apiKey, boolean debuggable, String schedulerType) {
+    if(Instance == null) {
+      Instance = new CcsClient(projectId, apiKey, debuggable, schedulerType);
+    } else {
+      throw new IllegalStateException("An instance already exists, please call getInstance()");
     }
   }
 
 
   public static CcsClient getInstance() {
     if (Instance == null) {
-      throw new IllegalStateException("CcsClient must first be instantiated possibly by a sub-class");
+      throw new IllegalStateException("CcsClient must first be instantiated using a call to createInstance()");
     }
     return Instance;
   }
@@ -313,9 +317,17 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
 
       case Util.BACKEND_ACTION_CANCEL:
-        if(inMessage.getDataPayload().get("cancelType").equals("all")) {
+        String type = inMessage.getDataPayload().get("cancelType");
+        if(type.equals("all")) {
           notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
           notificationSchedulerService.cancelUsingCustomId(inMessage.getDataPayload().get("subjectId"));
+        } else if(type.equals("id")) {
+          notificationSchedulerService.cancelUsingCustomId(inMessage.getDataPayload().get("subjectId"));
+        } else if(type.equals("token")) {
+          notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
+        } else {
+          logger.warn("No cancel type provided. Cancelling using the FCM token by default");
+          notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
         }
         break;
 

@@ -20,28 +20,20 @@ import org.radarcns.xmppserver.config.Config;
  *
  * @author yatharthranjan
  */
-public class EntryPoint extends CcsClient {
+public class EntryPoint{
 
-    protected static final Logger logger = LoggerFactory.getLogger(EntryPoint.class);
+    private static final Logger logger = LoggerFactory.getLogger(EntryPoint.class);
 
     private EntryPoint(String projectId, String apiKey, boolean debuggable, String schedulerType) {
-        super(projectId, apiKey, debuggable, schedulerType);
+        CcsClient.createInstance(projectId, apiKey, debuggable, schedulerType);
 
         try {
-            connect();
+            CcsClient.getInstance().connect();
         } catch (XMPPException | InterruptedException | KeyManagementException | NoSuchAlgorithmException | SmackException
                 | IOException e) {
             logger.error("Error trying to connect. Error: {}", e.getMessage());
         }
 
-        /*        // Send a sample downstream message to a device
-        final String messageId = Util.getUniqueMessageId();
-        final Map<String, String> dataPayload = new HashMap<String, String>();
-        dataPayload.put(Util.PAYLOAD_ATTRIBUTE_MESSAGE, "This is the simple sample message");
-        final CcsOutMessage message = new CcsOutMessage(toRegId, messageId, dataPayload);
-        final String jsonRequest = MessageMapper.toJsonString(message);
-        //sendDownstreamMessage(messageId, jsonRequest);
-        */
         try {
             final CountDownLatch latch = new CountDownLatch(1);
             latch.await();
@@ -75,8 +67,8 @@ public class EntryPoint extends CcsClient {
         commandLineArgs.dbPath = System.getenv("RADAR_XMPP_DB_PATH") != null ?
                 System.getenv("RADAR_XMPP_DB_PATH") : commandLineArgs.dbPath;
 
-        commandLineArgs.sender = System.getenv("RADAR_XMPP_FCM_SENDER_KEY") != null ?
-                System.getenv("RADAR_XMPP_FCM_SENDER_KEY") : commandLineArgs.sender ;
+        commandLineArgs.senderId = System.getenv("RADAR_XMPP_FCM_SENDER_KEY") != null ?
+                System.getenv("RADAR_XMPP_FCM_SENDER_KEY") : commandLineArgs.senderId;
 
         commandLineArgs.serverKey = System.getenv("RADAR_XMPP_FCM_SERVER_KEY") != null ?
                 System.getenv("RADAR_XMPP_FCM_SERVER_KEY") : commandLineArgs.serverKey;
@@ -101,14 +93,12 @@ public class EntryPoint extends CcsClient {
             }
         }
 
-        if(commandLineArgs.sender == null || commandLineArgs.sender.isEmpty()
+        if(commandLineArgs.senderId == null || commandLineArgs.senderId.isEmpty()
                 || commandLineArgs.serverKey == null || commandLineArgs.serverKey.isEmpty()) {
             parser.usage();
             logger.error("ERROR: Please specify the SENDER KEY and SERVER KEY " +
                     "either via commandline args or via environment variables. Use -h or --help for more info.");
         }
-
-        new EntryPoint(commandLineArgs.sender, commandLineArgs.serverKey, false, commandLineArgs.schedulerType);
+        new EntryPoint(commandLineArgs.senderId, commandLineArgs.serverKey, false, commandLineArgs.schedulerType);
     }
-
 }
