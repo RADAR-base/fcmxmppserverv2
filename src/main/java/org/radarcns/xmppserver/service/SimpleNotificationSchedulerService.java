@@ -1,5 +1,6 @@
 package org.radarcns.xmppserver.service;
 
+import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.model.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,6 +82,11 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
         } else {
             logger.warn("Cannot schedule using an instance of {} when it is not running.", SimpleNotificationSchedulerService.class.getName());
         }
+    }
+
+    @Override
+    public void schedule(List<Data> data) {
+        data.forEach(s -> schedule(s.getFrom(), s.getPayload()));
     }
 
     @Override

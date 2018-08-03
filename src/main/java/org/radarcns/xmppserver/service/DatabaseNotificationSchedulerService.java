@@ -6,11 +6,13 @@ import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.radarcns.xmppserver.ccs.CcsClientWrapper;
 import org.radarcns.xmppserver.commandline.CommandLineArgs;
+import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.model.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -110,6 +112,11 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         } else {
             logger.warn("Cannot stop an instance of {} when it is not running.", this.getClass().getName());
         }
+    }
+
+    @Override
+    public synchronized void schedule(List<Data> data) {
+        data.forEach(s -> schedule(s.getFrom(), s.getPayload()));
     }
 
     @Override

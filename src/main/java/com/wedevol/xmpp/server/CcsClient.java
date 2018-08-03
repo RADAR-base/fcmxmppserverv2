@@ -319,7 +319,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
 
       case Util.BACKEND_ACTION_CANCEL:
         String type = inMessage.getDataPayload().get("cancelType");
-        // Use a new thread to gain a lock so other threads cannot schedule while this is cancelling
+        // Use a new thread to gain a lock so other threads cannot schedule/cancel while this is cancelling
         new Thread(() -> {
           if(type.equals("all")) {
             notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
