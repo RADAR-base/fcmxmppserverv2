@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Database notification scheduler service class for the XMPP Server
@@ -32,6 +33,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     private boolean isRunning = false;
 
     private static final String TASK_NAME = "notification-one-time";
+    private static final String TASK_ID_DELIMITER = "+";
     private static final Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
 
     DatabaseNotificationSchedulerService(String type) {
@@ -54,7 +56,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                         .executeUpdate(
                                 "create table if not exists scheduled_tasks (\n" +
                                         "  task_name varchar(40) not null,\n" +
-                                        "  task_instance varchar(240) not null,\n" +
+                                        "  task_instance varchar(500) not null,\n" +
                                         "  task_data blob,\n" +
                                         "  execution_time timestamp(6) not null,\n" +
                                         "  picked BOOLEAN not null,\n" +
@@ -67,8 +69,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                                         ")");
 
             } catch (SQLException e) {
+                logger.error("Cannot start the service {} due to {}", this.getClass().getName(), e);
                 e.printStackTrace();
-                stop();
             }
             notificationOneTimeTask = Tasks.oneTime(TASK_NAME, Notification.class).execute(
                     (inst, ctx) -> {
@@ -111,11 +113,18 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     }
 
     @Override
-    public void schedule(String from, Map<String, String> payload) {
+    public synchronized void schedule(String from, Map<String, String> payload) {
         if(isRunning) {
-            // TODO add subject ID in the task instance id
             Notification notification = Notification.getNotification(from, payload);
-            scheduler.schedule(notificationOneTimeTask.instance(notification.getRecepient() + notification.getSubjectId() + UUID.randomUUID(), notification), notification.getScheduledTime().toInstant());
+
+            // Task id consists of 3 parts -- The FCM token, the subjectID (or any other custom ID)
+            // and a UUID to make the task unique
+            String taskId= notification.getRecepient() +
+                    TASK_ID_DELIMITER +
+                    notification.getSubjectId() +
+                    TASK_ID_DELIMITER +
+                    UUID.randomUUID();
+            scheduler.schedule(notificationOneTimeTask.instance(taskId, notification), notification.getScheduledTime().toInstant());
             logger.info("Task scheduled for notification {}", notification);
         } else {
             logger.warn("Cannot schedule using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
@@ -123,28 +132,46 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     }
 
     @Override
-    public void cancel(String from) {
+    public synchronized void cancelUsingFcmToken(String from) {
         if(isRunning) {
-            // TODO add the subject ID in the task instance id
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
-                if (taskScheduledExecution.getTaskInstance().getId().contains(from)) {
-                    logger.info("Removing the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
+                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
+                if (ids.length == 3 && from.equals(ids[0])) {
+                    logger.info("Removing the scheduled task for id {} from thread {} - {}", ids[0],
+                            Thread.currentThread().getName(), Thread.currentThread().getId());
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
         } else {
-            logger.warn("Cannot cancel using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
+            logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
     }
 
     @Override
-    public void updateToken(String oldToken, String newToken) {
+    public synchronized void cancelUsingCustomId(String id) {
         if(isRunning) {
+            scheduler.getScheduledExecutions(taskScheduledExecution -> {
+                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
+                if (ids.length == 3 && id.equals(ids[1])) {
+                    logger.info("Removing the scheduled task with id {} from thread {} - {}", taskScheduledExecution.getTaskInstance().getId(),
+                            Thread.currentThread().getName(), Thread.currentThread().getId());
+                    scheduler.cancel(taskScheduledExecution.getTaskInstance());
+                }
+            });
+        } else {
+            logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
+        }
+    }
 
+
+    @Override
+    public synchronized void updateToken(String oldToken, String newToken) {
+        if(isRunning) {
             // TODO update token based on subject id
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 if (taskScheduledExecution.getTaskInstance().getId().contains(oldToken)) {
-                    logger.info("Updating token on the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
+                    logger.info("Updating token on the scheduled task with id {} from thread {} - {}", taskScheduledExecution.getTaskInstance().getId(),
+                            Thread.currentThread().getName(), Thread.currentThread().getId());
                     Notification notification = (Notification) (taskScheduledExecution.getData());
                     if(notification.getRecepient().equals(oldToken)) {
                         notification.setRecepient(newToken);

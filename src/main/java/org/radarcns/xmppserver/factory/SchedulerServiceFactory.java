@@ -6,7 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Factroy class providing scheduler for the XMPP Server
+ * Factory class providing scheduler for the XMPP Server
  *
  * @author yatharthranjan
  */
