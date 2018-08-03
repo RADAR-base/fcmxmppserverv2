@@ -6,142 +6,185 @@ import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.radarcns.xmppserver.ccs.CcsClientWrapper;
 import org.radarcns.xmppserver.commandline.CommandLineArgs;
-import org.radarcns.xmppserver.config.DbConfig;
 import org.radarcns.xmppserver.model.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
-import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Database notification scheduler service class for the XMPP Server
  * This has functionality for both in-memory and persisent data bases.
+ * Abstract class so has to instantiated through sub-classes. Look at
+ * {@link InMemoryDatabaseNotificationSchedulerService} and
+ * {@link PersistentDatabaseNotificationSchedulerService}
  *
  * @author yatharthranjan
  */
-public class DatabaseNotificationSchedulerService implements NotificationSchedulerService {
+public abstract class DatabaseNotificationSchedulerService implements NotificationSchedulerService {
 
     private Scheduler scheduler;
-
     private BasicDataSource basicDataSource;
+    private OneTimeTask<Notification> notificationOneTimeTask;
 
-    OneTimeTask<Notification> notificationOneTimeTask;
+    private boolean isRunning = false;
 
     private static final String TASK_NAME = "notification-one-time";
+    private static final String TASK_ID_DELIMITER = "+";
+    private static final Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
 
-    private static DatabaseNotificationSchedulerService INSTANCE = null;
-
-    Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
-
-    private DatabaseNotificationSchedulerService(DbConfig dbConfig) {
+    DatabaseNotificationSchedulerService(String type) {
         this.basicDataSource = new BasicDataSource();
         this.basicDataSource.setDriverClassName("org.hsqldb.jdbcDriver");
-        this.basicDataSource.setUrl("jdbc:hsqldb:" + dbConfig.getDbType()
-                + DbConfig.DB_PATH_SEPARATOR + dbConfig.getDbPath());
+        this.basicDataSource.setUrl("jdbc:hsqldb:" + type
+                + ":" + CommandLineArgs.dbPath);
         this.basicDataSource.setUsername(CommandLineArgs.dbUser);
         this.basicDataSource.setPassword(CommandLineArgs.dbPass);
 
     }
 
-    public static NotificationSchedulerService getInstanceForCofig(DbConfig dbConfig) {
-        if(INSTANCE == null) {
-            INSTANCE = new DatabaseNotificationSchedulerService(dbConfig);
-        }
-        return INSTANCE;
-    }
-
     @Override
     public void start() {
 
-        try {
-            // Create table for db-scheduler
-            basicDataSource.getConnection().createStatement()
-                    .executeUpdate(
-                            "create table if not exists scheduled_tasks (\n" +
-                                    "  task_name varchar(40) not null,\n" +
-                                    "  task_instance varchar(240) not null,\n" +
-                                    "  task_data blob,\n" +
-                                    "  execution_time timestamp(6) not null,\n" +
-                                    "  picked BOOLEAN not null,\n" +
-                                    "  picked_by varchar(50),\n" +
-                                    "  last_success timestamp(6) null,\n" +
-                                    "  last_failure timestamp(6) null,\n" +
-                                    "  last_heartbeat timestamp(6) null,\n" +
-                                    "  version BIGINT not null,\n" +
-                                    "  PRIMARY KEY (task_name, task_instance)\n" +
-                                    ")");
+        if(! isRunning) {
+            try {
+                // Create table for db-scheduler
+                basicDataSource.getConnection().createStatement()
+                        .executeUpdate(
+                                "create table if not exists scheduled_tasks (\n" +
+                                        "  task_name varchar(40) not null,\n" +
+                                        "  task_instance varchar(500) not null,\n" +
+                                        "  task_data blob,\n" +
+                                        "  execution_time timestamp(6) not null,\n" +
+                                        "  picked BOOLEAN not null,\n" +
+                                        "  picked_by varchar(50),\n" +
+                                        "  last_success timestamp(6) null,\n" +
+                                        "  last_failure timestamp(6) null,\n" +
+                                        "  last_heartbeat timestamp(6) null,\n" +
+                                        "  version BIGINT not null,\n" +
+                                        "  PRIMARY KEY (task_name, task_instance)\n" +
+                                        ")");
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-            stop();
+            } catch (SQLException e) {
+                logger.error("Cannot start the service {} due to {}", this.getClass().getName(), e);
+                e.printStackTrace();
+            }
+            notificationOneTimeTask = Tasks.oneTime(TASK_NAME, Notification.class).execute(
+                    (inst, ctx) -> {
+                        CcsClientWrapper.getInstance().sendNotification(inst.getData());
+                    }
+            );
+
+            scheduler = Scheduler
+                    .create(basicDataSource, notificationOneTimeTask)
+                    .threads(5)
+                    .build();
+
+            scheduler.start();
+
+            Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
+
+            isRunning = true;
+        } else {
+            logger.warn("Cannot start an instance of {} when it is already running.", this.getClass().getName());
         }
-        notificationOneTimeTask = Tasks.oneTime(TASK_NAME, Notification.class).execute(
-                (inst, ctx) -> {
-                    CcsClientWrapper.getInstance().sendNotification(inst.getData());
-                }
-        );
-
-        scheduler = Scheduler
-                .create(basicDataSource, notificationOneTimeTask)
-                .threads(5)
-                .build();
-
-        scheduler.start();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
 
     }
 
     @Override
     public void stop() {
-        scheduler.stop();
 
-        try {
-            basicDataSource.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+        if(isRunning) {
+            scheduler.stop();
+
+            try {
+                basicDataSource.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            isRunning = false;
+        } else {
+            logger.warn("Cannot stop an instance of {} when it is not running.", this.getClass().getName());
         }
     }
 
     @Override
-    public void schedule(String from, Map<String, String> payload) {
+    public synchronized void schedule(String from, Map<String, String> payload) {
+        if(isRunning) {
+            Notification notification = Notification.getNotification(from, payload);
 
-        // TODO add subject ID in the task instance id
-        Notification notification = Notification.getNotification(from, payload);
-        scheduler.schedule(notificationOneTimeTask.instance(notification.getRecepient() + UUID.randomUUID(), notification), notification.getScheduledTime().toInstant());
-        logger.info("Task scheduled for notification {}", notification);
+            // Task id consists of 3 parts -- The FCM token, the subjectID (or any other custom ID)
+            // and a UUID to make the task unique
+            String taskId= notification.getRecepient() +
+                    TASK_ID_DELIMITER +
+                    notification.getSubjectId() +
+                    TASK_ID_DELIMITER +
+                    UUID.randomUUID();
+            scheduler.schedule(notificationOneTimeTask.instance(taskId, notification), notification.getScheduledTime().toInstant());
+            logger.info("Task scheduled for notification {}", notification);
+        } else {
+            logger.warn("Cannot schedule using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
+        }
     }
 
     @Override
-    public void cancel(String from) {
-        // TODO add the subject ID in the task instance id
-        scheduler.getScheduledExecutions(taskScheduledExecution -> {
-            if(taskScheduledExecution.getTaskInstance().getId().contains(from)) {
-                logger.info("Removing the scheduled task with id {}", taskScheduledExecution.getTaskInstance().getId());
-                scheduler.cancel(taskScheduledExecution.getTaskInstance());
-            }
-        });
+    public synchronized void cancelUsingFcmToken(String from) {
+        if(isRunning) {
+            scheduler.getScheduledExecutions(taskScheduledExecution -> {
+                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
+                if (ids.length == 3 && from.equals(ids[0])) {
+                    logger.info("Removing the scheduled task for id {} from thread {} - {}", ids[0],
+                            Thread.currentThread().getName(), Thread.currentThread().getId());
+                    scheduler.cancel(taskScheduledExecution.getTaskInstance());
+                }
+            });
+        } else {
+            logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
+        }
     }
 
     @Override
-    public void updateToken(String oldToken, String newToken) {
+    public synchronized void cancelUsingCustomId(String id) {
+        if(isRunning) {
+            scheduler.getScheduledExecutions(taskScheduledExecution -> {
+                String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
+                if (ids.length == 3 && id.equals(ids[1])) {
+                    logger.info("Removing the scheduled task with id {} from thread {} - {}", taskScheduledExecution.getTaskInstance().getId(),
+                            Thread.currentThread().getName(), Thread.currentThread().getId());
+                    scheduler.cancel(taskScheduledExecution.getTaskInstance());
+                }
+            });
+        } else {
+            logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
+        }
+    }
 
+
+    @Override
+    public synchronized void updateToken(String oldToken, String newToken) {
+        if(isRunning) {
+            // TODO update token based on subject id
+            scheduler.getScheduledExecutions(taskScheduledExecution -> {
+                if (taskScheduledExecution.getTaskInstance().getId().contains(oldToken)) {
+                    logger.info("Updating token on the scheduled task with id {} from thread {} - {}", taskScheduledExecution.getTaskInstance().getId(),
+                            Thread.currentThread().getName(), Thread.currentThread().getId());
+                    Notification notification = (Notification) (taskScheduledExecution.getData());
+                    if(notification.getRecepient().equals(oldToken)) {
+                        notification.setRecepient(newToken);
+                    }
+                }
+            });
+        } else {
+            logger.warn("Cannot update using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
+        }
     }
 
     @Override
     public boolean isRunning() {
-        return false;
-    }
-
-    public DatabaseNotificationSchedulerService getInstance() {
-        return null;
-    }
-
-    public static long getDuration(Date future) {
-        Date now = new Date();
-        return future.getTime() - now.getTime();
+        return isRunning;
     }
 }

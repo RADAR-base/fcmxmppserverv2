@@ -4,14 +4,14 @@ import com.beust.jcommander.Parameter;
 import org.radarcns.xmppserver.config.Config;
 
 /**
- * Parmaters class for parsing command line args for the XMPP Server
+ * Paramaters class for parsing command line args for the XMPP Server
  *
  * @author yatharthranjan
  */
 public class CommandLineArgs {
 
     @Parameter(names = { "-s", "--sender-id" }, description = "Sender ID of the FCM project on Firebase.")
-    public static String sender = null;
+    public static String senderId = null;
 
     @Parameter(names = { "-k", "--server-key" }, description = "Server Key of the FCM project on Firebase.")
     public static String serverKey = null;
@@ -25,7 +25,7 @@ public class CommandLineArgs {
     @Parameter(names = { "-u", "--db-user"}, description = "The username to use for db when using database notification schedulers (in-memory and persistent).")
     public static String dbUser = "SA";
 
-    @Parameter(names = { "-pa", "--db-password"}, description = "The password to use for db when using database notification schedulers (in-memory and persistent).", validateWith = PathValidator.class)
+    @Parameter(names = { "-pa", "--db-password"}, description = "The password to use for db when using database notification schedulers (in-memory and persistent).")
     public static String dbPass = "";
 
     @Parameter(names = { "-h", "--help"}, help = true, description = "Display the usage of the program with available options.")
