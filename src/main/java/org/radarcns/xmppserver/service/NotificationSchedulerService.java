@@ -11,7 +11,7 @@ public interface NotificationSchedulerService {
 
     void stop();
 
-    void schedule(String from, Map<String, String> payload);
+    void schedule(Data data);
 
     void schedule(List<Data> data);
 

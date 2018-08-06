@@ -116,13 +116,13 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public synchronized void schedule(List<Data> data) {
-        data.forEach(s -> schedule(s.getFrom(), s.getPayload()));
+        data.forEach(this::schedule);
     }
 
     @Override
-    public synchronized void schedule(String from, Map<String, String> payload) {
+    public synchronized void schedule(Data data) {
         if(isRunning) {
-            Notification notification = Notification.getNotification(from, payload);
+            Notification notification = Notification.getNotification(data);
 
             // Task id consists of 3 parts -- The FCM token, the subjectID (or any other custom ID)
             // and a UUID to make the task unique

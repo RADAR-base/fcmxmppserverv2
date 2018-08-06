@@ -18,21 +18,21 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     private boolean isRunning = false;
 
-    private synchronized void scheduleNotificationForDate(String from, Map<String, String> payload) {
-        Notification notification = Notification.getNotification(from, payload);
+    private synchronized void scheduleNotificationForDate(Data data) {
+        Notification notification = Notification.getNotification(data);
         ScheduleTask<Notification> notificationScheduleTask = new ScheduleTask<>(notification).scheduleForDate();
 
         logger.info(notification.toString());
 
-        if (scheduleTaskHashMap.containsKey(from)) {
-            if (! scheduleTaskHashMap.get(from).contains(notificationScheduleTask)) {
-                scheduleTaskHashMap.get(from).add(notificationScheduleTask);
+        if (scheduleTaskHashMap.containsKey(data.getFrom())) {
+            if (! scheduleTaskHashMap.get(data.getFrom()).contains(notificationScheduleTask)) {
+                scheduleTaskHashMap.get(data.getFrom()).add(notificationScheduleTask);
             }
         } else {
             HashSet<ScheduleTask<Notification>> newHashSet = new HashSet<>();
             newHashSet.add(notificationScheduleTask);
 
-            scheduleTaskHashMap.put(from + notification.getSubjectId(), newHashSet);
+            scheduleTaskHashMap.put(data.getFrom() + notification.getSubjectId(), newHashSet);
         }
     }
 
@@ -76,9 +76,9 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     }
 
     @Override
-    public void schedule(String token, Map<String, String> payload) {
+    public void schedule(Data data) {
         if(isRunning) {
-            scheduleNotificationForDate(token, payload);
+            scheduleNotificationForDate(data);
         } else {
             logger.warn("Cannot schedule using an instance of {} when it is not running.", SimpleNotificationSchedulerService.class.getName());
         }
@@ -86,7 +86,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     @Override
     public void schedule(List<Data> data) {
-        data.forEach(s -> schedule(s.getFrom(), s.getPayload()));
+        data.forEach(this::schedule);
     }
 
     @Override

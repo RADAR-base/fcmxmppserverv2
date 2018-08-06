@@ -10,10 +10,14 @@ import java.util.Map;
  * @author yatharth
  */
 public class Data {
-    // TODO add data fields
 
-    String from;
-    Map<String, String> payload;
+    private String from;
+    private Map<String, String> payload;
+
+    public Data(String from, Map<String, String> payload) {
+        this.from = from;
+        this.payload = payload;
+    }
 
     public String getFrom() {
         return from;

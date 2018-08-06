@@ -35,7 +35,9 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smackx.ping.PingFailedListener;
 import org.jivesoftware.smackx.ping.PingManager;
 import org.radarcns.xmppserver.factory.SchedulerServiceFactory;
+import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.service.NotificationSchedulerService;
+import org.radarcns.xmppserver.util.ScheduleCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParser;
@@ -72,6 +74,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
   private final Map<String, Message> pendingMessages = new ConcurrentHashMap<>();
 
   private NotificationSchedulerService notificationSchedulerService;
+  private ScheduleCache scheduleCache;
 
   private static CcsClient Instance = null;
 
@@ -100,6 +103,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
 
     this.notificationSchedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
     logger.info("Using Scheduler Service of type : {}", this.notificationSchedulerService.getClass().getName());
+
+    scheduleCache = new ScheduleCache(30, 100, this.notificationSchedulerService);
 
   }
 
@@ -314,7 +319,10 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         if(!notificationSchedulerService.isRunning()) {
           notificationSchedulerService.start();
         }
-        notificationSchedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
+
+        // TODO Add CacheBuilder and cache requests
+        //notificationSchedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
+          scheduleCache.add(new Data(inMessage.getFrom(), inMessage.getDataPayload()));
         break;
 
       case Util.BACKEND_ACTION_CANCEL:
