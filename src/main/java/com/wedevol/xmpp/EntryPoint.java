@@ -79,6 +79,12 @@ public class EntryPoint{
         commandLineArgs.dbPass = System.getenv("RADAR_XMPP_DB_PASS") != null ?
                 System.getenv("RADAR_XMPP_DB_PASS") : commandLineArgs.dbPass;
 
+        commandLineArgs.cacheExpiry = System.getenv("RADAR_XMPP_CACHE_EXPIRY") !=null ?
+                Long.valueOf(System.getenv("RADAR_XMPP_CACHE_EXPIRY")) : commandLineArgs.cacheExpiry;
+        commandLineArgs.cacheMaxSize = System.getenv("RADAR_XMPP_CACHE_MAX_SIZE") != null ?
+                Long.valueOf(System.getenv("RADAR_XMPP_CACHE_MAX_SIZE")) : commandLineArgs.cacheMaxSize;
+        commandLineArgs.cacheCleanUpInterval = System.getenv("RADAR_XMPP_CACHE_CLEANUP_INTERVAL") !=null ?
+                Long.valueOf(System.getenv("RADAR_XMPP_CACHE_CLEANUP_INTERVAL")) : commandLineArgs.cacheMaxSize;
 
         if(! commandLineArgs.schedulerType.equals(Config.SCHEDULER_SIMPLE)
                 && (commandLineArgs.dbPath == null || commandLineArgs.dbPath.isEmpty())) {
