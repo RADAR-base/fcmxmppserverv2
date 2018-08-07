@@ -1,6 +1,7 @@
 package org.radarcns.xmppserver.model;
 
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -9,7 +10,7 @@ import java.util.Map;
  *
  * @author yatharth
  */
-public class Data {
+public class Data implements Serializable{
 
     private String from;
     private Map<String, String> payload;

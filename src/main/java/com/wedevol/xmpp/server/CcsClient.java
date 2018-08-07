@@ -34,6 +34,7 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smackx.ping.PingFailedListener;
 import org.jivesoftware.smackx.ping.PingManager;
+import org.radarcns.xmppserver.commandline.CommandLineArgs;
 import org.radarcns.xmppserver.factory.SchedulerServiceFactory;
 import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.service.NotificationSchedulerService;
@@ -54,7 +55,8 @@ import com.wedevol.xmpp.util.Util;
  * downstream). Sample Smack implementation of a client for FCM Cloud Connection Server. Most of it
  * has been taken more or less verbatim from Google's documentation: <a href=
  * "https://firebase.google.com/docs/cloud-messaging/xmpp-server-ref">https://firebase.google.com/docs/cloud-messaging/xmpp-server-ref</a>
- * 
+ *
+ * @author Charz++
  * @author yatharthranjan
  */
 public class CcsClient implements StanzaListener, ReconnectionListener, ConnectionListener, PingFailedListener {
@@ -104,8 +106,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     this.notificationSchedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
     logger.info("Using Scheduler Service of type : {}", this.notificationSchedulerService.getClass().getName());
 
-    scheduleCache = new ScheduleCache(30, 100, this.notificationSchedulerService);
-
+    // Remove requests after every 30s or 100 records and schedule them
+    scheduleCache = new ScheduleCache(CommandLineArgs.cacheExpiry, CommandLineArgs.cacheMaxSize, this.notificationSchedulerService);
   }
 
   public static void createInstance(String projectId, String apiKey, boolean debuggable, String schedulerType) {
@@ -190,6 +192,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     logger.info("User logged in: {}", username);
 
     this.notificationSchedulerService.start();
+    // cleanup cache every 2 minutes
+    this.scheduleCache.runCleanUpTillShutdown(CommandLineArgs.cacheCleanUpInterval);
   }
 
   /**
@@ -321,8 +325,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         }
 
         // TODO Add CacheBuilder and cache requests
-        //notificationSchedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
-          scheduleCache.add(new Data(inMessage.getFrom(), inMessage.getDataPayload()));
+        // notificationSchedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
+        scheduleCache.add(new Data(inMessage.getFrom(), inMessage.getDataPayload()));
         break;
 
       case Util.BACKEND_ACTION_CANCEL:

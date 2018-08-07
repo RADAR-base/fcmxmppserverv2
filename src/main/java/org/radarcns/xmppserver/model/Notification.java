@@ -102,18 +102,18 @@ public class Notification implements Serializable{
         return map;
     }
 
-    public static Notification getNotification(Data data) {
-        String datetime = data.getPayload().get("time"); // epoch timestamp in milliseconds
-        String notificationTitle = data.getPayload().get("notificationTitle");
-        String notificationMessage = data.getPayload().get("notificationMessage");
-        String subjectId = data.getPayload().get("subjectId") == null ? "null" : data.getPayload().get("subjectId");
+    public static Notification getNotification(String to, Map<String, String> payload) {
+        String datetime = payload.get("time"); // epoch timestamp in milliseconds
+        String notificationTitle = payload.get("notificationTitle");
+        String notificationMessage = payload.get("notificationMessage");
+        String subjectId = payload.get("subjectId") == null ? "null" : payload.get("subjectId");
 
         // Set to max of 28 days if not set
-        int ttlSeconds = data.getPayload().get("ttlSeconds") == null ? 2_419_200 : Integer.valueOf(data.getPayload().get("ttlSeconds"));
+        int ttlSeconds = payload.get("ttlSeconds") == null ? 2_419_200 : Integer.valueOf(payload.get("ttlSeconds"));
 
         Date date = new Date(Long.parseLong(datetime));
 
 
-        return new Notification(notificationTitle, notificationMessage, date, data.getFrom(), subjectId, ttlSeconds);
+        return new Notification(notificationTitle, notificationMessage, date, to, subjectId, ttlSeconds);
     }
 }

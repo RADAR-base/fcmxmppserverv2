@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -29,7 +28,7 @@ import java.util.regex.Pattern;
 public abstract class DatabaseNotificationSchedulerService implements NotificationSchedulerService {
 
     private Scheduler scheduler;
-    private BasicDataSource basicDataSource;
+    private final BasicDataSource basicDataSource;
     private OneTimeTask<Notification> notificationOneTimeTask;
 
     private boolean isRunning = false;
@@ -100,6 +99,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     public void stop() {
 
         if(isRunning) {
+            isRunning = false;
+
             scheduler.stop();
 
             try {
@@ -107,8 +108,6 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             } catch (SQLException e) {
                 e.printStackTrace();
             }
-
-            isRunning = false;
         } else {
             logger.warn("Cannot stop an instance of {} when it is not running.", this.getClass().getName());
         }
@@ -122,7 +121,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     @Override
     public synchronized void schedule(Data data) {
         if(isRunning) {
-            Notification notification = Notification.getNotification(data);
+            Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
 
             // Task id consists of 3 parts -- The FCM token, the subjectID (or any other custom ID)
             // and a UUID to make the task unique
@@ -144,7 +143,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
                 if (ids.length == 3 && from.equals(ids[0])) {
-                    logger.info("Removing the scheduled task for id {} from thread {} - {}", ids[0],
+                    logger.info("Removing the scheduled task using token {} from thread {} - {}", ids[0],
                             Thread.currentThread().getName(), Thread.currentThread().getId());
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
@@ -160,7 +159,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
                 if (ids.length == 3 && id.equals(ids[1])) {
-                    logger.info("Removing the scheduled task with id {} from thread {} - {}", taskScheduledExecution.getTaskInstance().getId(),
+                    logger.info("Removing the scheduled task using id {} from thread {} - {}", id,
                             Thread.currentThread().getName(), Thread.currentThread().getId());
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }

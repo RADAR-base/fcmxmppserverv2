@@ -19,7 +19,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     private boolean isRunning = false;
 
     private synchronized void scheduleNotificationForDate(Data data) {
-        Notification notification = Notification.getNotification(data);
+        Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
         ScheduleTask<Notification> notificationScheduleTask = new ScheduleTask<>(notification).scheduleForDate();
 
         logger.info(notification.toString());
@@ -64,7 +64,8 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     @Override
     public void stop() {
-        if(!isRunning) {
+        if(isRunning) {
+            isRunning = false;
             // Stop all scheduled tasks
             for (String key : scheduleTaskHashMap.keySet()) {
                 scheduleTaskHashMap.get(key).forEach(s -> s.getScheduledFuture().cancel(true));
