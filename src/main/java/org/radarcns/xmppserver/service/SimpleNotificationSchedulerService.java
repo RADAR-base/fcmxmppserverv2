@@ -104,8 +104,13 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     public void updateToken(String oldToken, String newToken) {
         //TODO Add update logic
         if (scheduleTaskHashMap.containsKey(oldToken)) {
-            scheduleTaskHashMap.get(oldToken).forEach(s -> s.getData().setRecepient(newToken));
+            scheduleTaskHashMap.get(oldToken).forEach(s -> s.setData(new Notification.Builder(s.getData()).setRecepient(newToken).build()));
         }
+    }
+
+    @Override
+    public void confirmDelivery(String messageId, String token) {
+        logger.info("Delivered Message with Message ID {} to Token {}", messageId, token);
     }
 
     @Override

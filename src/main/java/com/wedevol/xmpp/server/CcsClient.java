@@ -276,9 +276,11 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         handleNackReceipt(jsonMap);
         break;
       case "receipt":
+        Map<String, String> data = (Map<String, String>) jsonMap.get("data");
         // TODO: handle the delivery receipt when a device confirms that it received a particular message.
-        logger.info("Message delivered to {} with Message Id {} and Data {}", jsonMap.get("from"),
-                jsonMap.get("message_id"), jsonMap.get("data"));
+        logger.info("Message delivered to {} with Original Message Id {} and Data {}", jsonMap.get("from"),
+                data.get("original_message_id"), jsonMap.get("data"));
+        // TODO: Send info to kafka and then remove this from the database.
         break;
       case "control":
         handleControlMessage(jsonMap);

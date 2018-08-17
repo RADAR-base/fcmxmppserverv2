@@ -12,22 +12,21 @@ import java.util.Objects;
  */
 public class Notification implements Serializable{
 
-    private String title;
-    private String message;
-    private String subjectId;
-    private String recepient;
-    private Date scheduledTime;
+    private final String title;
+    private final String message;
+    private final String subjectId;
+    private final String recepient;
+    private final Date scheduledTime;
     // time to live or expiry in seconds
     private int ttlSeconds;
 
-    public Notification(String title, String message, Date date, String recepient,
-                        String subjectId, int ttlSeconds){
-        this.title = title;
-        this.message = message;
-        this.scheduledTime = date;
-        this.recepient = recepient;
-        this.subjectId = subjectId;
-        this.ttlSeconds = ttlSeconds;
+    private Notification(Builder builder){
+        this.title = builder.title;
+        this.message = builder.message;
+        this.scheduledTime = builder.scheduledTime;
+        this.recepient = builder.recepient;
+        this.subjectId = builder.subjectId;
+        this.ttlSeconds = builder.ttlSeconds;
     }
 
     public String getTitle() {
@@ -52,10 +51,6 @@ public class Notification implements Serializable{
 
     public int getTtlSeconds() {
         return ttlSeconds;
-    }
-
-    public void setRecepient(String recepient) {
-        this.recepient = recepient;
     }
 
     @Override
@@ -113,7 +108,66 @@ public class Notification implements Serializable{
 
         Date date = new Date(Long.parseLong(datetime));
 
+        return new Notification.Builder().setTitle(notificationTitle)
+                .setMessage(notificationMessage).setScheduledTime(date).setRecepient(to)
+                .setSubjectId(subjectId).setTtlSeconds(ttlSeconds).build();
+    }
 
-        return new Notification(notificationTitle, notificationMessage, date, to, subjectId, ttlSeconds);
+
+    public static class Builder {
+        private String title;
+        private String message;
+        private String subjectId;
+        private String recepient;
+        private Date scheduledTime;
+        // time to live or expiry in seconds
+        private int ttlSeconds;
+
+        public Builder(){
+            // Do nothing
+        }
+
+        public Builder(Notification notification) {
+            this.title = notification.title;
+            this.message = notification.message;
+            this.scheduledTime = notification.scheduledTime;
+            this.recepient = notification.recepient;
+            this.subjectId = notification.subjectId;
+            this.ttlSeconds = notification.ttlSeconds;
+        }
+
+        public Builder setTitle(String title) {
+            this.title = title;
+            return this;
+        }
+
+        public Builder setMessage(String message) {
+            this.message = message;
+            return this;
+        }
+
+        public Builder setSubjectId(String subjectId) {
+            this.subjectId = subjectId;
+            return this;
+        }
+
+        public Builder setRecepient(String recepient) {
+            this.recepient = recepient;
+            return this;
+        }
+
+        public Builder setScheduledTime(Date scheduledTime) {
+            this.scheduledTime = scheduledTime;
+            return this;
+        }
+
+        public Builder setTtlSeconds(int ttlSeconds) {
+            this.ttlSeconds = ttlSeconds;
+            return this;
+        }
+
+        public Notification build() {
+            return new Notification(this);
+        }
     }
 }

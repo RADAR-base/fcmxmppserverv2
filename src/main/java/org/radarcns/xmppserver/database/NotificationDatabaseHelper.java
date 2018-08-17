@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 public class NotificationDatabaseHelper {
@@ -17,12 +19,15 @@ public class NotificationDatabaseHelper {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
 
+
+    // TODO change the structure of the tables acc to 3rd Normal form.
+
     public void createTableforNotification() {
         this.jdbcTemplate.execute("create table if not exists notification_info (\n" +
                 "  notification_task_uuid varchar(40),\n" +
                 "  title varchar(100) not null,\n" +
-                "  message BOOLEAN not null,\n" +
-                "  execution_time timestamp(6) null,\n" +
+                "  message varchar(100) not null,\n" +
+                "  execution_time varchar(30) null,\n" +
                 "  ttl_seconds BIGINT null,\n" +
                 "  PRIMARY KEY (notification_task_uuid)\n" +
                 ")");
@@ -31,10 +36,10 @@ public class NotificationDatabaseHelper {
 
     public void createTableForStatus() {
         this.jdbcTemplate.execute("create table if not exists status_info (\n" +
-                "  subject_id varchar(40) not null,\n" +
-                "  fcm_token varchar(50) not null,\n" +
+                "  subject_id varchar(100) not null,\n" +
+                "  fcm_token varchar(256) not null,\n" +
                 "  notification_task_uuid varchar(40),\n" +
-                "  fcm_message_id varchar(40) UNIQUE,\n" +
+                "  fcm_message_id varchar(100) UNIQUE,\n" +
                 "  delivered BOOLEAN null,\n" +
                 "  PRIMARY KEY (subject_id, fcm_token, notification_task_uuid),\n" +
                 "  FOREIGN KEY (notification_task_uuid) REFERENCES notification_info(notification_task_uuid)\n" +
@@ -50,16 +55,19 @@ public class NotificationDatabaseHelper {
     public boolean checkIfNotificationExists(Notification notification) {
 
         List<Notification> notifications = this.jdbcTemplate.query("select status_info.subject_id, status_info.fcm_token," +
-                        " status_info.notification_task_uuid, notification_info.title, notification_info.ttl_seconds, " +
-                        "notification_info.message, notification_info.execution_time from notification_info inner join status_info" +
-                "where status_info.subject_id = ? and status_info.fcm_token = ?"
+                        " status_info.notification_task_uuid, notification_info.title, notification_info.ttl_seconds," +
+                        " notification_info.message, notification_info.execution_time from notification_info inner join status_info" +
+                        " on notification_info.notification_task_uuid = status_info.notification_task_uuid where status_info.subject_id = ?" +
+                        " and status_info.fcm_token = ?"
                 , new Object[]{notification.getSubjectId(), notification.getRecepient()}
-                , (rs, rowNum) -> new Notification(rs.getString("title"),
-                        rs.getString("message"),
-                        rs.getDate("execution_time"),
-                        rs.getString("subject_id"),
-                        rs.getString("fcm_token"),
-                        rs.getInt("ttl_seconds")));
+                , (rs, rowNum) -> new Notification.Builder().setTitle(rs.getString("title"))
+                        .setMessage(rs.getString("message"))
+                        .setScheduledTime(new Date(Long.parseLong(rs.getString("execution_time"))))
+                        .setRecepient(rs.getString("fcm_token"))
+                        .setSubjectId(rs.getString("subject_id"))
+                        .setTtlSeconds(rs.getInt("ttl_seconds"))
+                        .build());
+        logger.debug("Notifications found: {}", Arrays.toString(notifications.toArray()));
         return notifications.contains(notification);
     }
 
@@ -68,7 +76,7 @@ public class NotificationDatabaseHelper {
                 taskId,
                 notification.getTitle(),
                 notification.getMessage(),
-                notification.getScheduledTime(),
+                String.valueOf(notification.getScheduledTime().toInstant().toEpochMilli()),
                 notification.getTtlSeconds()
         );
         int result2 = this.jdbcTemplate.update("insert into status_info values (?,?,?,?,?)",
@@ -87,10 +95,19 @@ public class NotificationDatabaseHelper {
     }
 
     public void removeNotification(String taskId) {
-        this.jdbcTemplate.update("delete from status_info where notification_task_uuid = ?", taskId);
-        this.jdbcTemplate.update("delete from notification_info where notification_task_uuid = ?", taskId);
+        int result = this.jdbcTemplate.update("delete from status_info where notification_task_uuid = ?", taskId);
+        result += this.jdbcTemplate.update("delete from notification_info where notification_task_uuid = ?", taskId);
 
-        logger.debug("Removed notification from ");
+        if(result == 2)
+            logger.debug("Removed notification for task id {}", taskId);
+    }
+
+    public void removeNotification(String messageId, String fcmToken) {
+        int result = this.jdbcTemplate.update("delete from status_info, notification_info from notification_info" +
+                        " inner join status_info on notification_info.notification_task_uuid = status_info.notification_task_uuid" +
+                        " where status_info.fcm_token = ? or status_info.fcm_message_id= ?", fcmToken, messageId);
+        if(result == 1)
+            logger.debug("Removed notification for Message Id {} and Token {}", messageId, fcmToken);
     }
 
     /**
@@ -101,8 +118,8 @@ public class NotificationDatabaseHelper {
      * @param fcmToken FCM Token to remove the notifications
      */
     public void removeAllNotifications(String subjectId, String fcmToken) {
-        int result = this.jdbcTemplate.update("delete status_info, notification_info from notification_info" +
-                "inner join status_info on notification_info.notification_task_uuid = status_info.notification_task_uuid" +
+        int result = this.jdbcTemplate.update("delete from status_info, notification_info from notification_info" +
+                " inner join status_info on notification_info.notification_task_uuid = status_info.notification_task_uuid" +
                 " where status_info.subject_id = ? or status_info.fcm_token = ?", subjectId, fcmToken);
         logger.debug("{} notifications removed from database for subject={} and token={}", result, subjectId, fcmToken);
     }

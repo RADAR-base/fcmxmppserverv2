@@ -21,6 +21,8 @@ public interface NotificationSchedulerService {
 
     void updateToken(String oldToken, String newToken);
 
+    void confirmDelivery(String messageId, String token);
+
     boolean isRunning();
 
 }

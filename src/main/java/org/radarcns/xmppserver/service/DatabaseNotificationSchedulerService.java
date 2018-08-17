@@ -14,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
+import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -80,7 +82,15 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
             Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
 
+/*            // TODO remove this code
+            long exactTime = ZonedDateTime.now().plusMinutes(1).toEpochSecond();
+            Notification notification = new Notification("test", "insert into db",
+                    new Date(exactTime), "null", "null", 123);
+            databaseHelper.addNotification(notification, "null", "null" + UUID.randomUUID());
+            logger.info("Checking : " + databaseHelper.checkIfNotificationExists(notification));*/
             isRunning = true;
+
+
         } else {
             logger.warn("Cannot start an instance of {} when it is already running.", this.getClass().getName());
         }
@@ -123,7 +133,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                         taskUuid;
                 scheduler.schedule(notificationOneTimeTask.instance(taskId, notification), notification.getScheduledTime().toInstant());
                 logger.info("Task scheduled for notification {}", notification);
-                databaseHelper.addNotification(notification, data.getMessageId(), taskUuid);
+                databaseHelper.addNotification(notification, String.valueOf(notification.hashCode()), taskUuid);
             } else {
                 logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
             }
@@ -177,7 +187,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                             Thread.currentThread().getName(), Thread.currentThread().getId());
                     Notification notification = (Notification) (taskScheduledExecution.getData());
                     if(notification.getRecepient().equals(oldToken)) {
-                        notification.setRecepient(newToken);
+                        //notification.setRecepient(newToken);
                     }
                 }
             });
@@ -189,5 +199,14 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     @Override
     public boolean isRunning() {
         return isRunning;
+    }
+
+    @Override
+    public void confirmDelivery(String messageId, String token) {
+        // TODO: Send data to kafka (add to batch)
+        databaseHelper.updateDeliveryStatus(true, token, messageId);
+
+        // TODO: remove this and add in the Batched Kafka Sender
+        databaseHelper.removeNotification(messageId, token);
     }
 }
