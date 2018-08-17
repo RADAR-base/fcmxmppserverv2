@@ -31,7 +31,7 @@ public class CommandLineArgs {
     @Parameter(names = { "-ce", "--cache-expiry"}, description = "The cache expiry in milliseconds to perform time based eviction of records from cache. See CacheBuilder class from Guava library for more details.")
     public static long cacheExpiry = 30000;
 
-    @Parameter(names = { "-ci", "--cache-cleanup-interval"}, description = "The cache cleanup interval in milliseconds to perform custom time based eviction of records from cache. To increase throughput use a lower value.")
+    @Parameter(names = { "-ci", "--cache-cleanup-interval"}, description = "The cache cleanup interval in milliseconds to perform custom time based eviction of records from cache (In cases where there is not operations on the cache). To increase throughput use a lower value.")
     public static long cacheCleanUpInterval = 120000;
 
     @Parameter(names = { "-cs", "--cache-max-size"}, description = "The cache maximum size to perform size based eviction of records from cache. See CacheBuilder class from Guava library for more details.")

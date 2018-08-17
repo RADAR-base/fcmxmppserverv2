@@ -36,6 +36,7 @@ public class CcsClientWrapper {
 
         outMessage.setNotificationPayload(notifyMap);
         outMessage.setTimeToLive(t.getTtlSeconds());
+        outMessage.setDeliveryReceiptRequested(true);
 
         final String jsonRequest = MessageMapper.toJsonString(outMessage);
         ccsClient.sendDownstreamMessage(messageId, jsonRequest);

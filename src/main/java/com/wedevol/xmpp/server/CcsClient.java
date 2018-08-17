@@ -277,6 +277,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
       case "receipt":
         // TODO: handle the delivery receipt when a device confirms that it received a particular message.
+        logger.info("Message delivered to {} with Message Id {} and Data {}", jsonMap.get("from"),
+                jsonMap.get("message_id"), jsonMap.get("data"));
         break;
       case "control":
         handleControlMessage(jsonMap);
@@ -326,7 +328,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
 
         // TODO Add CacheBuilder and cache requests
         // notificationSchedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
-        scheduleCache.add(new Data(inMessage.getFrom(), inMessage.getDataPayload()));
+        scheduleCache.add(new Data(inMessage.getFrom(), inMessage.getDataPayload(), inMessage.getMessageId()));
         break;
 
       case Util.BACKEND_ACTION_CANCEL:

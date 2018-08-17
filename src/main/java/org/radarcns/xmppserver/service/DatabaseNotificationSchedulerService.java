@@ -6,12 +6,14 @@ import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.radarcns.xmppserver.ccs.CcsClientWrapper;
 import org.radarcns.xmppserver.commandline.CommandLineArgs;
+import org.radarcns.xmppserver.database.DataSourceWrapper;
+import org.radarcns.xmppserver.database.NotificationDatabaseHelper;
 import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.model.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -28,9 +30,9 @@ import java.util.regex.Pattern;
 public abstract class DatabaseNotificationSchedulerService implements NotificationSchedulerService {
 
     private Scheduler scheduler;
-    private final BasicDataSource basicDataSource;
+    private final DataSourceWrapper scheduleDataSourceWrapper;
+    private final NotificationDatabaseHelper databaseHelper;
     private OneTimeTask<Notification> notificationOneTimeTask;
-
     private boolean isRunning = false;
 
     private static final String TASK_NAME = "notification-one-time";
@@ -38,41 +40,31 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     private static final Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
 
     DatabaseNotificationSchedulerService(String type) {
-        this.basicDataSource = new BasicDataSource();
-        this.basicDataSource.setDriverClassName("org.hsqldb.jdbcDriver");
-        this.basicDataSource.setUrl("jdbc:hsqldb:" + type
+        BasicDataSource basicDataSource = new BasicDataSource();
+        basicDataSource.setDriverClassName("org.hsqldb.jdbcDriver");
+        basicDataSource.setUrl("jdbc:hsqldb:" + type
                 + ":" + CommandLineArgs.dbPath);
-        this.basicDataSource.setUsername(CommandLineArgs.dbUser);
-        this.basicDataSource.setPassword(CommandLineArgs.dbPass);
+        basicDataSource.setUsername(CommandLineArgs.dbUser);
+        basicDataSource.setPassword(CommandLineArgs.dbPass);
+        this.scheduleDataSourceWrapper = new DataSourceWrapper(basicDataSource);
 
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
+        dataSource.setUrl("jdbc:hsqldb:" + type
+                + ":" + "/usr/hsql/status");
+        dataSource.setUsername(CommandLineArgs.dbUser);
+        dataSource.setPassword(CommandLineArgs.dbPass);
+        this.databaseHelper = new NotificationDatabaseHelper(dataSource);
     }
 
     @Override
     public void start() {
 
         if(! isRunning) {
-            try {
-                // Create table for db-scheduler
-                basicDataSource.getConnection().createStatement()
-                        .executeUpdate(
-                                "create table if not exists scheduled_tasks (\n" +
-                                        "  task_name varchar(40) not null,\n" +
-                                        "  task_instance varchar(500) not null,\n" +
-                                        "  task_data blob,\n" +
-                                        "  execution_time timestamp(6) not null,\n" +
-                                        "  picked BOOLEAN not null,\n" +
-                                        "  picked_by varchar(50),\n" +
-                                        "  last_success timestamp(6) null,\n" +
-                                        "  last_failure timestamp(6) null,\n" +
-                                        "  last_heartbeat timestamp(6) null,\n" +
-                                        "  version BIGINT not null,\n" +
-                                        "  PRIMARY KEY (task_name, task_instance)\n" +
-                                        ")");
+            scheduleDataSourceWrapper.createTableForScheduler();
+            databaseHelper.createTableforNotification();
+            databaseHelper.createTableForStatus();
 
-            } catch (SQLException e) {
-                logger.error("Cannot start the service {} due to {}", this.getClass().getName(), e);
-                e.printStackTrace();
-            }
             notificationOneTimeTask = Tasks.oneTime(TASK_NAME, Notification.class).execute(
                     (inst, ctx) -> {
                         CcsClientWrapper.getInstance().sendNotification(inst.getData());
@@ -80,7 +72,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             );
 
             scheduler = Scheduler
-                    .create(basicDataSource, notificationOneTimeTask)
+                    .create(scheduleDataSourceWrapper.getDataSource(), notificationOneTimeTask)
                     .threads(5)
                     .build();
 
@@ -92,7 +84,6 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         } else {
             logger.warn("Cannot start an instance of {} when it is already running.", this.getClass().getName());
         }
-
     }
 
     @Override
@@ -100,14 +91,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
         if(isRunning) {
             isRunning = false;
-
             scheduler.stop();
-
-            try {
-                basicDataSource.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            scheduleDataSourceWrapper.close();
         } else {
             logger.warn("Cannot stop an instance of {} when it is not running.", this.getClass().getName());
         }
@@ -118,20 +103,30 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         data.forEach(this::schedule);
     }
 
+    /**
+     * Schedules a single notification. This checks if a notification already exists for a particular subject and FCM token,
+     * if it does not exist then schedules a task.
+     * @param data data object encapsulating the scheduling information
+     */
     @Override
     public synchronized void schedule(Data data) {
         if(isRunning) {
             Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
-
-            // Task id consists of 3 parts -- The FCM token, the subjectID (or any other custom ID)
-            // and a UUID to make the task unique
-            String taskId= notification.getRecepient() +
-                    TASK_ID_DELIMITER +
-                    notification.getSubjectId() +
-                    TASK_ID_DELIMITER +
-                    UUID.randomUUID();
-            scheduler.schedule(notificationOneTimeTask.instance(taskId, notification), notification.getScheduledTime().toInstant());
-            logger.info("Task scheduled for notification {}", notification);
+            if(!databaseHelper.checkIfNotificationExists(notification)) {
+                String taskUuid = UUID.randomUUID().toString();
+                // Task id consists of 3 parts -- The FCM token, the subjectID (or any other custom ID)
+                // and a UUID to make the task unique
+                String taskId = notification.getRecepient() +
+                        TASK_ID_DELIMITER +
+                        notification.getSubjectId() +
+                        TASK_ID_DELIMITER +
+                        taskUuid;
+                scheduler.schedule(notificationOneTimeTask.instance(taskId, notification), notification.getScheduledTime().toInstant());
+                logger.info("Task scheduled for notification {}", notification);
+                databaseHelper.addNotification(notification, data.getMessageId(), taskUuid);
+            } else {
+                logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
+            }
         } else {
             logger.warn("Cannot schedule using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
@@ -148,6 +143,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
+            databaseHelper.removeAllNotifications(null, from);
         } else {
             logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
@@ -164,6 +160,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
+            databaseHelper.removeAllNotifications(id, null);
         } else {
             logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
