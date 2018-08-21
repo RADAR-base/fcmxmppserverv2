@@ -77,11 +77,13 @@ public class ScheduleCache {
 
         executorService.scheduleAtFixedRate(() -> {
             if(notificationSchedulerService.isRunning()) {
-                logger.info("Running custom maintenance to evict values every {} mins", (interval/60));
-                synchronized (this) {
-                    lastPush = Instant.now();
-                    notificationSchedulerService.schedule(currentData);
-                    currentData = new ArrayList<>();
+                if(!currentData.isEmpty()) {
+                    logger.info("Running custom maintenance to evict values every {} mins", (interval / 60));
+                    synchronized (this) {
+                        lastPush = Instant.now();
+                        notificationSchedulerService.schedule(currentData);
+                        currentData = new ArrayList<>();
+                    }
                 }
             } else {
                 logger.warn("Closing the cache Clean Up thread");
