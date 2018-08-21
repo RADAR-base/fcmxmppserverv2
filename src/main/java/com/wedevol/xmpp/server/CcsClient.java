@@ -107,7 +107,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     logger.info("Using Scheduler Service of type : {}", this.notificationSchedulerService.getClass().getName());
 
     // Remove requests after every 30s or 100 records and schedule them
-    scheduleCache = new ScheduleCache(CommandLineArgs.cacheExpiry, CommandLineArgs.cacheMaxSize, this.notificationSchedulerService);
+    scheduleCache = new ScheduleCache(CommandLineArgs.cacheExpiry, this.notificationSchedulerService);
   }
 
   public static void createInstance(String projectId, String apiKey, boolean debuggable, String schedulerType) {
@@ -277,10 +277,9 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
       case "receipt":
         Map<String, String> data = (Map<String, String>) jsonMap.get("data");
-        // TODO: handle the delivery receipt when a device confirms that it received a particular message.
-        logger.info("Message delivered to {} with Original Message Id {} and Data {}", jsonMap.get("from"),
-                data.get("original_message_id"), jsonMap.get("data"));
         // TODO: Send info to kafka and then remove this from the database.
+        notificationSchedulerService.confirmDelivery(data.get("original_message_id"),
+                data.get("device_registration_id"));
         break;
       case "control":
         handleControlMessage(jsonMap);
@@ -328,7 +327,6 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
           notificationSchedulerService.start();
         }
 
-        // TODO Add CacheBuilder and cache requests
         // notificationSchedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
         scheduleCache.add(new Data(inMessage.getFrom(), inMessage.getDataPayload(), inMessage.getMessageId()));
         break;

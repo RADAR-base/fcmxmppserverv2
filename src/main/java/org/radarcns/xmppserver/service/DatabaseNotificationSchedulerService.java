@@ -12,10 +12,7 @@ import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.model.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-import java.time.ZonedDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -50,10 +47,11 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         basicDataSource.setPassword(CommandLineArgs.dbPass);
         this.scheduleDataSourceWrapper = new DataSourceWrapper(basicDataSource);
 
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        BasicDataSource dataSource = new BasicDataSource();
         dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
         dataSource.setUrl("jdbc:hsqldb:" + type
-                + ":" + "/usr/hsql/status");
+                + ":" + CommandLineArgs.dbPath.substring(0,
+                CommandLineArgs.dbPath.lastIndexOf('/')) + "/status");
         dataSource.setUsername(CommandLineArgs.dbUser);
         dataSource.setPassword(CommandLineArgs.dbPass);
         this.databaseHelper = new NotificationDatabaseHelper(dataSource);
@@ -64,8 +62,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
         if(! isRunning) {
             scheduleDataSourceWrapper.createTableForScheduler();
-            databaseHelper.createTableforNotification();
             databaseHelper.createTableForStatus();
+            databaseHelper.createTableforNotification();
 
             notificationOneTimeTask = Tasks.oneTime(TASK_NAME, Notification.class).execute(
                     (inst, ctx) -> {
@@ -81,19 +79,28 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             scheduler.start();
 
             Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
+            migrateDataFromScheduler();
 
-/*            // TODO remove this code
-            long exactTime = ZonedDateTime.now().plusMinutes(1).toEpochSecond();
-            Notification notification = new Notification("test", "insert into db",
-                    new Date(exactTime), "null", "null", 123);
-            databaseHelper.addNotification(notification, "null", "null" + UUID.randomUUID());
-            logger.info("Checking : " + databaseHelper.checkIfNotificationExists(notification));*/
             isRunning = true;
 
 
         } else {
             logger.warn("Cannot start an instance of {} when it is already running.", this.getClass().getName());
         }
+    }
+
+    /**
+     * Migrates data from the Scheduler database({@link CommandLineArgs#dbPath}) to the new Status database (/usr/hsql/status).
+     * This is required to make sure that the two are synchronised and provide backward compatibility.
+     */
+    private void migrateDataFromScheduler() {
+        scheduler.getScheduledExecutions(taskScheduledExecution -> {
+            String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
+                Notification notification = (Notification) taskScheduledExecution.getData();
+                if(!databaseHelper.checkIfNotificationExists(notification)) {
+                    databaseHelper.addNotification(notification, String.valueOf(notification.hashCode()), ids[2]);
+                }
+        });
     }
 
     @Override
@@ -115,12 +122,15 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     /**
      * Schedules a single notification. This checks if a notification already exists for a particular subject and FCM token,
-     * if it does not exist then schedules a task.
+     * if it does not exist then schedules a task. The messageId for FCM is generate using Hashcode from the
+     * {@link Notification} object as each notification is supposed to be unique.
      * @param data data object encapsulating the scheduling information
      */
     @Override
     public synchronized void schedule(Data data) {
         if(isRunning) {
+
+            // TODO: Use a cache to get and add the scheduled notifications as most of them will be from same subject at a given burst of requests
             Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
             if(!databaseHelper.checkIfNotificationExists(notification)) {
                 String taskUuid = UUID.randomUUID().toString();
@@ -203,10 +213,11 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public void confirmDelivery(String messageId, String token) {
-        // TODO: Send data to kafka (add to batch)
-        databaseHelper.updateDeliveryStatus(true, token, messageId);
+        // TODO: Uncomment so kafka sender can pick this up from the Database
+        //databaseHelper.updateDeliveryStatus(true, token, messageId);
 
         // TODO: remove this and add in the Batched Kafka Sender
         databaseHelper.removeNotification(messageId, token);
+        logger.info("Removed message from database after delivery: {} ", messageId);
     }
 }
