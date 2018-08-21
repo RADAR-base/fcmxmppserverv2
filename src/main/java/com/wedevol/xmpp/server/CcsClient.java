@@ -332,9 +332,10 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
 
       case Util.BACKEND_ACTION_CANCEL:
+        // TODO test this and re-enable
         String type = inMessage.getDataPayload().get("cancelType");
         // Use a new thread to gain a lock so other threads cannot schedule/cancel while this is cancelling
-        new Thread(() -> {
+    /*        new Thread(() -> {
           if(type.equals("all")) {
             notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
             notificationSchedulerService.cancelUsingCustomId(inMessage.getDataPayload().get("subjectId"));
@@ -346,7 +347,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
             logger.warn("No cancel type provided. Cancelling using the FCM token by default");
             notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
           }
-        }).start();
+        }).start();*/
         break;
 
       case Util.BACKEND_ACTION_UPDATE_TOKEN:

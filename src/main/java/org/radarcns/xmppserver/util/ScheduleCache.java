@@ -51,7 +51,8 @@ public class ScheduleCache {
 
     public void add(Data data) {
         logger.info("Adding data to cache...");
-        if(NotificationDatabaseHelper.isThresholdPassed(lastPush, scheduleAfter)) {
+        if(NotificationDatabaseHelper.isThresholdPassed(lastPush, scheduleAfter)
+                && currentData.size() > 10) {
             logger.info("Scheduling all notifications after {} seconds", scheduleAfter);
             synchronized (this) {
                 lastPush = Instant.now();
