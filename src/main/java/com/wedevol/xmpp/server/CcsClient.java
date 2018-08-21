@@ -34,8 +34,11 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smackx.ping.PingFailedListener;
 import org.jivesoftware.smackx.ping.PingManager;
+import org.radarcns.xmppserver.commandline.CommandLineArgs;
 import org.radarcns.xmppserver.factory.SchedulerServiceFactory;
+import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.service.NotificationSchedulerService;
+import org.radarcns.xmppserver.util.ScheduleCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParser;
@@ -52,7 +55,8 @@ import com.wedevol.xmpp.util.Util;
  * downstream). Sample Smack implementation of a client for FCM Cloud Connection Server. Most of it
  * has been taken more or less verbatim from Google's documentation: <a href=
  * "https://firebase.google.com/docs/cloud-messaging/xmpp-server-ref">https://firebase.google.com/docs/cloud-messaging/xmpp-server-ref</a>
- * 
+ *
+ * @author Charz++
  * @author yatharthranjan
  */
 public class CcsClient implements StanzaListener, ReconnectionListener, ConnectionListener, PingFailedListener {
@@ -72,6 +76,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
   private final Map<String, Message> pendingMessages = new ConcurrentHashMap<>();
 
   private NotificationSchedulerService notificationSchedulerService;
+  private ScheduleCache scheduleCache;
 
   private static CcsClient Instance = null;
 
@@ -101,6 +106,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     this.notificationSchedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
     logger.info("Using Scheduler Service of type : {}", this.notificationSchedulerService.getClass().getName());
 
+    // Remove requests after every 30s or 100 records and schedule them
+    scheduleCache = new ScheduleCache(CommandLineArgs.cacheExpiry, this.notificationSchedulerService);
   }
 
   public static void createInstance(String projectId, String apiKey, boolean debuggable, String schedulerType) {
@@ -185,6 +192,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     logger.info("User logged in: {}", username);
 
     this.notificationSchedulerService.start();
+    // cleanup cache every 2 minutes
+    this.scheduleCache.runCleanUpTillShutdown(CommandLineArgs.cacheCleanUpInterval);
   }
 
   /**
@@ -267,7 +276,10 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         handleNackReceipt(jsonMap);
         break;
       case "receipt":
-        // TODO: handle the delivery receipt when a device confirms that it received a particular message.
+        Map<String, String> data = (Map<String, String>) jsonMap.get("data");
+        // TODO: Send info to kafka and then remove this from the database.
+        notificationSchedulerService.confirmDelivery(data.get("original_message_id"),
+                data.get("device_registration_id"));
         break;
       case "control":
         handleControlMessage(jsonMap);
@@ -314,13 +326,16 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         if(!notificationSchedulerService.isRunning()) {
           notificationSchedulerService.start();
         }
-        notificationSchedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
+
+        // notificationSchedulerService.schedule(inMessage.getFrom(), inMessage.getDataPayload());
+        scheduleCache.add(new Data(inMessage.getFrom(), inMessage.getDataPayload(), inMessage.getMessageId()));
         break;
 
       case Util.BACKEND_ACTION_CANCEL:
+        // TODO test this and re-enable
         String type = inMessage.getDataPayload().get("cancelType");
-        // Use a new thread to gain a lock so other threads cannot schedule while this is cancelling
-        new Thread(() -> {
+        // Use a new thread to gain a lock so other threads cannot schedule/cancel while this is cancelling
+    /*        new Thread(() -> {
           if(type.equals("all")) {
             notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
             notificationSchedulerService.cancelUsingCustomId(inMessage.getDataPayload().get("subjectId"));
@@ -332,7 +347,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
             logger.warn("No cancel type provided. Cancelling using the FCM token by default");
             notificationSchedulerService.cancelUsingFcmToken(inMessage.getFrom());
           }
-        }).start();
+        }).start();*/
         break;
 
       case Util.BACKEND_ACTION_UPDATE_TOKEN:

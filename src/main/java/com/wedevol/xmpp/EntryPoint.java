@@ -49,6 +49,7 @@ public class EntryPoint{
             parser.setProgramName("radar-xmppserver");
             parser.parse(args);
         } catch (ParameterException exc) {
+            exc.printStackTrace();
             parser.usage();
             System.exit(1);
         }
@@ -79,6 +80,11 @@ public class EntryPoint{
         commandLineArgs.dbPass = System.getenv("RADAR_XMPP_DB_PASS") != null ?
                 System.getenv("RADAR_XMPP_DB_PASS") : commandLineArgs.dbPass;
 
+        commandLineArgs.cacheExpiry = System.getenv("RADAR_XMPP_CACHE_EXPIRY") !=null ?
+                Long.valueOf(System.getenv("RADAR_XMPP_CACHE_EXPIRY")) : commandLineArgs.cacheExpiry;
+
+        commandLineArgs.cacheCleanUpInterval = System.getenv("RADAR_XMPP_CACHE_CLEANUP_INTERVAL") !=null ?
+                Long.valueOf(System.getenv("RADAR_XMPP_CACHE_CLEANUP_INTERVAL")) : commandLineArgs.cacheCleanUpInterval;
 
         if(! commandLineArgs.schedulerType.equals(Config.SCHEDULER_SIMPLE)
                 && (commandLineArgs.dbPath == null || commandLineArgs.dbPath.isEmpty())) {

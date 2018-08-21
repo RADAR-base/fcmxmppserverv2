@@ -1,5 +1,6 @@
 package org.radarcns.xmppserver.service;
 
+import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.model.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,21 +18,21 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     private boolean isRunning = false;
 
-    private synchronized void scheduleNotificationForDate(String from, Map<String, String> payload) {
-        Notification notification = Notification.getNotification(from, payload);
+    private synchronized void scheduleNotificationForDate(Data data) {
+        Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
         ScheduleTask<Notification> notificationScheduleTask = new ScheduleTask<>(notification).scheduleForDate();
 
         logger.info(notification.toString());
 
-        if (scheduleTaskHashMap.containsKey(from)) {
-            if (! scheduleTaskHashMap.get(from).contains(notificationScheduleTask)) {
-                scheduleTaskHashMap.get(from).add(notificationScheduleTask);
+        if (scheduleTaskHashMap.containsKey(data.getFrom())) {
+            if (! scheduleTaskHashMap.get(data.getFrom()).contains(notificationScheduleTask)) {
+                scheduleTaskHashMap.get(data.getFrom()).add(notificationScheduleTask);
             }
         } else {
             HashSet<ScheduleTask<Notification>> newHashSet = new HashSet<>();
             newHashSet.add(notificationScheduleTask);
 
-            scheduleTaskHashMap.put(from + notification.getSubjectId(), newHashSet);
+            scheduleTaskHashMap.put(data.getFrom() + notification.getSubjectId(), newHashSet);
         }
     }
 
@@ -63,7 +64,8 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     @Override
     public void stop() {
-        if(!isRunning) {
+        if(isRunning) {
+            isRunning = false;
             // Stop all scheduled tasks
             for (String key : scheduleTaskHashMap.keySet()) {
                 scheduleTaskHashMap.get(key).forEach(s -> s.getScheduledFuture().cancel(true));
@@ -75,12 +77,17 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     }
 
     @Override
-    public void schedule(String token, Map<String, String> payload) {
+    public void schedule(Data data) {
         if(isRunning) {
-            scheduleNotificationForDate(token, payload);
+            scheduleNotificationForDate(data);
         } else {
             logger.warn("Cannot schedule using an instance of {} when it is not running.", SimpleNotificationSchedulerService.class.getName());
         }
+    }
+
+    @Override
+    public void schedule(List<Data> data) {
+        data.forEach(this::schedule);
     }
 
     @Override
@@ -97,8 +104,13 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     public void updateToken(String oldToken, String newToken) {
         //TODO Add update logic
         if (scheduleTaskHashMap.containsKey(oldToken)) {
-            scheduleTaskHashMap.get(oldToken).forEach(s -> s.getData().setRecepient(newToken));
+            scheduleTaskHashMap.get(oldToken).forEach(s -> s.setData(new Notification.Builder(s.getData()).setRecepient(newToken).build()));
         }
+    }
+
+    @Override
+    public void confirmDelivery(String messageId, String token) {
+        logger.info("Delivered Message with Message ID {} to Token {}", messageId, token);
     }
 
     @Override

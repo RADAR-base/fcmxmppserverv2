@@ -28,6 +28,12 @@ public class CommandLineArgs {
     @Parameter(names = { "-pa", "--db-password"}, description = "The password to use for db when using database notification schedulers (in-memory and persistent).")
     public static String dbPass = "";
 
+    @Parameter(names = { "-ce", "--cache-expiry"}, description = "The cache expiry in seconds to perform time based eviction of records from cache.")
+    public static long cacheExpiry = 30;
+
+    @Parameter(names = { "-ci", "--cache-cleanup-interval"}, description = "The cache cleanup interval in seconds to perform custom time based eviction of records from cache (In cases where there is not operations on the cache). To increase throughput use a lower value.")
+    public static long cacheCleanUpInterval = 120;
+
     @Parameter(names = { "-h", "--help"}, help = true, description = "Display the usage of the program with available options.")
     public boolean help;
 }
