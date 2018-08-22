@@ -163,7 +163,7 @@ public class NotificationDatabaseHelper {
     }
 
     /**
-     * Removes all the notifications for a particular subject and device token.
+     * Removes all the notifications for a particular subject or device token.
      * This follows when a cancel request is made.
      * //TODO Send delivery info to kafka first before removing them
      * @param subjectId subject ID to remove

@@ -382,8 +382,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
       return;
     }
     final String errorCode = errorCodeObj.get();
-    if (errorCode.equals("INVALID_JSON") || errorCode.equals("BAD_REGISTRATION")
-        || errorCode.equals("DEVICE_UNREGISTERED") || errorCode.equals("BAD_ACK")
+    if (errorCode.equals("INVALID_JSON") || errorCode.equals("BAD_REGISTRATION") || errorCode.equals("BAD_ACK")
         || errorCode.equals("TOPICS_MESSAGE_RATE_EXCEEDED") || errorCode.equals("DEVICE_MESSAGE_RATE_EXCEEDED")) {
       logger.info("Device error: {} -> {}", jsonMap.get("error"), jsonMap.get("error_description"));
     } else if (errorCode.equals("SERVICE_UNAVAILABLE") || errorCode.equals("INTERNAL_SERVER_ERROR")) {
@@ -391,6 +390,9 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     } else if (errorCode.equals("CONNECTION_DRAINING")) {
       logger.info("Connection draining from Nack ...");
       handleConnectionDraining();
+    } else if (errorCode.equals("DEVICE_UNREGISTERED")) {
+      // Remove all scheduled notifications if a device is unregistered
+      notificationSchedulerService.cancelUsingFcmToken((String)jsonMap.get("from"));
     } else {
       logger.info("Received unknown FCM Error Code: {}", errorCode);
     }
