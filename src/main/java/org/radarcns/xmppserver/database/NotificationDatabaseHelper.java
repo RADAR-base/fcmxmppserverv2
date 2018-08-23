@@ -5,8 +5,11 @@ import org.radarcns.xmppserver.util.CachedMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 
 import javax.sql.DataSource;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.Temporal;
@@ -78,21 +81,14 @@ public class NotificationDatabaseHelper {
      * @param fcmToken the FCM token for the device
      * @return {@link List} of {@link Notification}
      */
-    private List<Notification> findNotifications(String subjectId, String fcmToken) {
+    public List<Notification> findNotifications(String subjectId, String fcmToken) {
 
         List<Notification> notifications = this.jdbcTemplate.query("select status_info.subject_id, status_info.fcm_token," +
                         " status_info.notification_task_uuid, notification_info.title, notification_info.ttl_seconds," +
                         " notification_info.message, notification_info.execution_time from notification_info inner join status_info" +
                         " on notification_info.notification_task_uuid = status_info.notification_task_uuid where status_info.subject_id = ?" +
                         " and status_info.fcm_token = ?"
-                , new Object[]{subjectId, fcmToken}
-                , (rs, rowNum) -> new Notification.Builder().setTitle(rs.getString("title"))
-                        .setMessage(rs.getString("message"))
-                        .setScheduledTime(new Date(Long.parseLong(rs.getString("execution_time"))))
-                        .setRecepient(rs.getString("fcm_token"))
-                        .setSubjectId(rs.getString("subject_id"))
-                        .setTtlSeconds(rs.getInt("ttl_seconds"))
-                        .build());
+                , new Object[]{subjectId, fcmToken}, new NotificationRowMapper());
 
         return notifications;
     }
@@ -107,13 +103,7 @@ public class NotificationDatabaseHelper {
                         " status_info.notification_task_uuid, notification_info.title, notification_info.ttl_seconds," +
                         " notification_info.message, notification_info.execution_time from notification_info inner join status_info" +
                         " on notification_info.notification_task_uuid = status_info.notification_task_uuid"
-                , (rs, rowNum) -> new Notification.Builder().setTitle(rs.getString("title"))
-                        .setMessage(rs.getString("message"))
-                        .setScheduledTime(new Date(Long.parseLong(rs.getString("execution_time"))))
-                        .setRecepient(rs.getString("fcm_token"))
-                        .setSubjectId(rs.getString("subject_id"))
-                        .setTtlSeconds(rs.getInt("ttl_seconds"))
-                        .build());
+                , new NotificationRowMapper());
 
         return notifications;
     }
@@ -181,5 +171,19 @@ public class NotificationDatabaseHelper {
      */
     public static boolean isThresholdPassed(Temporal time, Duration duration) {
         return Duration.between(time, Instant.now()).compareTo(duration) > 0;
+    }
+
+    private class NotificationRowMapper implements RowMapper<Notification> {
+
+        @Override
+        public Notification mapRow(ResultSet rs, int rowNum) throws SQLException {
+            return new Notification.Builder().setTitle(rs.getString("title"))
+                    .setMessage(rs.getString("message"))
+                    .setScheduledTime(new Date(Long.parseLong(rs.getString("execution_time"))))
+                    .setRecepient(rs.getString("fcm_token"))
+                    .setSubjectId(rs.getString("subject_id"))
+                    .setTtlSeconds(rs.getInt("ttl_seconds"))
+                    .build();
+        }
     }
 }

@@ -2,6 +2,7 @@ package org.radarcns.xmppserver.service;
 
 import org.radarcns.xmppserver.model.Data;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +14,7 @@ public interface NotificationSchedulerService {
 
     void schedule(Data data);
 
-    void schedule(List<Data> data);
+    void schedule(Collection<Data> data);
 
     void cancelUsingFcmToken(String from);
 

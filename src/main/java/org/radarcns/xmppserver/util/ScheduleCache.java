@@ -9,8 +9,9 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.Temporal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,9 +25,9 @@ import java.util.concurrent.TimeUnit;
 public class ScheduleCache {
 
     private Logger logger = LoggerFactory.getLogger(ScheduleCache.class);
-
-    private List<Data> currentData;
+    private Set<Data> currentData;
     private  Temporal lastPush;
+
     private final Duration scheduleAfter;
     private final NotificationSchedulerService notificationSchedulerService;
 
@@ -38,13 +39,8 @@ public class ScheduleCache {
      *                                     the notification upon removal of records from the cache
      */
     public ScheduleCache(long expiry, NotificationSchedulerService notificationSchedulerService) {
-/*        dataCache = CacheBuilder.newBuilder()
-                .maximumSize(maxSize)
-                .expireAfterWrite(expiry, TimeUnit.MILLISECONDS)
-                .removalListener(this)
-                .build();*/
         this.notificationSchedulerService = notificationSchedulerService;
-        this.currentData = new ArrayList<>();
+        this.currentData = Collections.synchronizedSet(new HashSet<>());
         lastPush = Instant.MIN;
         scheduleAfter = Duration.ofSeconds(expiry);
     }
@@ -54,15 +50,15 @@ public class ScheduleCache {
         if(NotificationDatabaseHelper.isThresholdPassed(lastPush, scheduleAfter)
                 && currentData.size() > 10) {
             logger.info("Scheduling all notifications after {} seconds", scheduleAfter);
-            synchronized (this) {
-                lastPush = Instant.now();
-                currentData.add(data);
-                notificationSchedulerService.schedule(currentData);
-                currentData = new ArrayList<>();
-            }
-        } else {
-            currentData.add(data);
+            pushData();
         }
+        currentData.add(data);
+    }
+
+    private synchronized void pushData() {
+        notificationSchedulerService.schedule(currentData);
+        currentData = Collections.synchronizedSet(new HashSet<>());
+        lastPush = Instant.now();
     }
 
     /**
@@ -74,17 +70,13 @@ public class ScheduleCache {
      *
      */
     public void runCleanUpTillShutdown(long interval) {
-        final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+        final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
         executorService.scheduleAtFixedRate(() -> {
             if(notificationSchedulerService.isRunning()) {
+                logger.info("Running custom maintenance to evict values every {} mins", (interval / 60));
                 if(!currentData.isEmpty()) {
-                    logger.info("Running custom maintenance to evict values every {} mins", (interval / 60));
-                    synchronized (this) {
-                        lastPush = Instant.now();
-                        notificationSchedulerService.schedule(currentData);
-                        currentData = new ArrayList<>();
-                    }
+                    pushData();
                 }
             } else {
                 logger.warn("Closing the cache Clean Up thread");

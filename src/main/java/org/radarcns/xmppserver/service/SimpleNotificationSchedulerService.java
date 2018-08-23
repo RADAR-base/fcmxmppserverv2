@@ -86,7 +86,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     }
 
     @Override
-    public void schedule(List<Data> data) {
+    public void schedule(Collection<Data> data) {
         data.forEach(this::schedule);
     }
 

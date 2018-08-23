@@ -10,12 +10,13 @@ import org.radarcns.xmppserver.database.DataSourceWrapper;
 import org.radarcns.xmppserver.database.NotificationDatabaseHelper;
 import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.model.Notification;
+import org.radarcns.xmppserver.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Database notification scheduler service class for the XMPP Server
@@ -35,6 +36,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     private boolean isRunning = false;
 
     private static final String TASK_NAME = "notification-one-time";
+    private Map<User, Set<Notification>> cacheNotifications;
     private static final String TASK_ID_DELIMITER = "+";
     private static final Logger logger = LoggerFactory.getLogger(DatabaseNotificationSchedulerService.class);
 
@@ -55,6 +57,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         dataSource.setUsername(CommandLineArgs.dbUser);
         dataSource.setPassword(CommandLineArgs.dbPass);
         this.databaseHelper = new NotificationDatabaseHelper(dataSource);
+        this.cacheNotifications = Collections.synchronizedMap(new HashMap<>());
     }
 
     @Override
@@ -115,9 +118,43 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         }
     }
 
+    /**
+     * Schedules a {@link Collection} of {@link Data} using the database.
+     * The reduces the number of database transactions to depend on the number of
+     * {@link User} instead number of {@link Notification}. This is because at a given burst
+     * of schedule requests, most of them are going to be from a limited number of users, thus
+     * reducing the number of database transactions and improving performance.
+     * @param data {@link Collection} of {@link Data} to be scheduled.
+     */
     @Override
-    public synchronized void schedule(List<Data> data) {
-        data.forEach(this::schedule);
+    public synchronized void schedule(Collection<Data> data) {
+
+        // TODO Merge into 1 if not using List<Notification> here
+        Set<Notification> notifications = data.stream()
+                .map(s -> Notification.getNotification(s.getFrom(), s.getPayload()))
+                .distinct()
+                .collect(Collectors.toSet());
+
+        Set<User> users = notifications.stream()
+                .map(n -> new User(n.getSubjectId(), n.getRecepient()))
+                .collect(Collectors.toSet());
+
+        for( User user: users) {
+            Set<Notification> notificationsList = Collections.synchronizedSet(
+                    new HashSet<>(databaseHelper.findNotifications(user.getSubjectId(), user.getFcmToken())));
+            cacheNotifications.put(user, notificationsList);
+        }
+        notifications.forEach(this::scheduleUsingCache);
+    }
+
+
+    private synchronized void scheduleUsingCache(Notification notification) {
+        User user = new User(notification.getSubjectId(), notification.getRecepient());
+        if(!cacheNotifications.get(user).contains(notification)) {
+            // scheduling logic
+        } else {
+            logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
+        }
     }
 
     /**
@@ -130,7 +167,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     public synchronized void schedule(Data data) {
         if(isRunning) {
 
-            // TODO: Use a cache to get and add the scheduled notifications as most of them will be from same subject at a given burst of requests
+            // TODO: Use Notification Hash code instead of UUID for third part of task id ensuring only unique notifications are scheduled
             Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
             if(!databaseHelper.checkIfNotificationExists(notification)) {
                 String taskUuid = UUID.randomUUID().toString();

@@ -277,9 +277,13 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
       case "receipt":
         Map<String, String> data = (Map<String, String>) jsonMap.get("data");
-        // TODO: Send info to kafka and then remove this from the database.
-        notificationSchedulerService.confirmDelivery(data.get("original_message_id"),
-                data.get("device_registration_id"));
+
+        // Right now this is the only status but firebase may change this in the future
+        if(data.get("message_status").equals("MESSAGE_SENT_TO_DEVICE")) {
+          // TODO: Send info to kafka and then remove this from the database.
+          notificationSchedulerService.confirmDelivery(data.get("original_message_id"),
+                  data.get("device_registration_id"));
+        }
         break;
       case "control":
         handleControlMessage(jsonMap);
