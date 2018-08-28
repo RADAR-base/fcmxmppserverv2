@@ -1,7 +1,6 @@
 package org.radarcns.xmppserver.database;
 
 import org.radarcns.xmppserver.model.Notification;
-import org.radarcns.xmppserver.util.CachedMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -22,14 +21,9 @@ public class NotificationDatabaseHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(NotificationDatabaseHelper.class);
     private final JdbcTemplate jdbcTemplate;
-    private CachedMap<String, Notification> notificationCachedMap;
 
     public NotificationDatabaseHelper(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
-
-        // TODO use this cache to improve performance
-        notificationCachedMap = new CachedMap<>(this::findAllNotifications, Notification::getRecepient,
-                Duration.ofSeconds(5), Duration.ofMinutes(30));
     }
 
     // TODO change the structure of the tables acc to 3rd Normal form.
@@ -97,7 +91,7 @@ public class NotificationDatabaseHelper {
      * Finds notifications for a all the subjects from the databse.
      * @return {@link List} of {@link Notification}
      */
-    private List<Notification> findAllNotifications() {
+    public List<Notification> findAllNotifications() {
 
         List<Notification> notifications = this.jdbcTemplate.query("select status_info.subject_id, status_info.fcm_token," +
                         " status_info.notification_task_uuid, notification_info.title, notification_info.ttl_seconds," +

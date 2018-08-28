@@ -26,4 +26,6 @@ public interface NotificationSchedulerService {
 
     boolean isRunning();
 
+    long getNumberOfScheduledNotifications();
+
 }

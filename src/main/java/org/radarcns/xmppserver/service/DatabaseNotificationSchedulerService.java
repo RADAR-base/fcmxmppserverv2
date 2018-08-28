@@ -1,6 +1,7 @@
 package org.radarcns.xmppserver.service;
 
 import com.github.kagkarlsson.scheduler.Scheduler;
+import com.github.kagkarlsson.scheduler.task.TaskInstance;
 import com.github.kagkarlsson.scheduler.task.helper.OneTimeTask;
 import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import org.apache.commons.dbcp.BasicDataSource;
@@ -101,7 +102,12 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
             String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
                 Notification notification = (Notification) taskScheduledExecution.getData();
                 if(!databaseHelper.checkIfNotificationExists(notification)) {
-                    databaseHelper.addNotification(notification, String.valueOf(notification.hashCode()), ids[2]);
+                    try {
+                        databaseHelper.addNotification(notification, String.valueOf(notification.hashCode()), ids[2]);
+                        logger.info("Notification added from scheduler database");
+                    } catch (Exception e) {
+                        logger.error("Cannot insert from scheduler database notification {} due to {}", notification, e.fillInStackTrace());
+                    }
                 }
         });
     }
@@ -128,8 +134,6 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
      */
     @Override
     public synchronized void schedule(Collection<Data> data) {
-
-        // TODO Merge into 1 if not using List<Notification> here
         Set<Notification> notifications = data.stream()
                 .map(s -> Notification.getNotification(s.getFrom(), s.getPayload()))
                 .distinct()
@@ -139,21 +143,45 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                 .map(n -> new User(n.getSubjectId(), n.getRecepient()))
                 .collect(Collectors.toSet());
 
+        // TODO: Insert Notifications in batches using batchUpdate()
+
         for( User user: users) {
-            Set<Notification> notificationsList = Collections.synchronizedSet(
+            Set<Notification> notificationSet = Collections.synchronizedSet(
                     new HashSet<>(databaseHelper.findNotifications(user.getSubjectId(), user.getFcmToken())));
-            cacheNotifications.put(user, notificationsList);
+            cacheNotifications.put(user, notificationSet);
         }
         notifications.forEach(this::scheduleUsingCache);
+    }
+
+    private void addNotification(Notification notification) {
+        String taskUuid = UUID.randomUUID().toString();
+        // Task id consists of 3 parts -- The FCM token, the subjectID (or any other custom ID)
+        // and a UUID to make the task unique
+        String taskId = notification.getRecepient() +
+                TASK_ID_DELIMITER +
+                notification.getSubjectId() +
+                TASK_ID_DELIMITER +
+                taskUuid;
+        TaskInstance<?> taskInstance = notificationOneTimeTask.instance(taskId, notification);
+        try {
+            scheduler.schedule(taskInstance, notification.getScheduledTime().toInstant());
+            logger.info("Task scheduled for notification {}", notification);
+            databaseHelper.addNotification(notification, String.valueOf(notification.hashCode()), taskUuid);
+        } catch (Exception e) {
+            logger.error("Cannot insert notification {} due to {}", notification, e.fillInStackTrace());
+            scheduler.cancel(taskInstance);
+        }
     }
 
 
     private synchronized void scheduleUsingCache(Notification notification) {
         User user = new User(notification.getSubjectId(), notification.getRecepient());
-        if(!cacheNotifications.get(user).contains(notification)) {
-            // scheduling logic
+
+        if(cacheNotifications.containsKey(user) && !cacheNotifications.get(user).contains(notification)) {
+            cacheNotifications.get(user).add(notification);
+            addNotification(notification);
         } else {
-            logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
+            logger.debug("Notification already exists in cache for subject {} : {}", notification.getSubjectId(), notification);
         }
     }
 
@@ -166,21 +194,9 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     @Override
     public synchronized void schedule(Data data) {
         if(isRunning) {
-
-            // TODO: Use Notification Hash code instead of UUID for third part of task id ensuring only unique notifications are scheduled
             Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
             if(!databaseHelper.checkIfNotificationExists(notification)) {
-                String taskUuid = UUID.randomUUID().toString();
-                // Task id consists of 3 parts -- The FCM token, the subjectID (or any other custom ID)
-                // and a UUID to make the task unique
-                String taskId = notification.getRecepient() +
-                        TASK_ID_DELIMITER +
-                        notification.getSubjectId() +
-                        TASK_ID_DELIMITER +
-                        taskUuid;
-                scheduler.schedule(notificationOneTimeTask.instance(taskId, notification), notification.getScheduledTime().toInstant());
-                logger.info("Task scheduled for notification {}", notification);
-                databaseHelper.addNotification(notification, String.valueOf(notification.hashCode()), taskUuid);
+                addNotification(notification);
             } else {
                 logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
             }
@@ -256,5 +272,10 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         // TODO: remove this and add in the Batched Kafka Sender
         databaseHelper.removeNotification(messageId, token);
         logger.info("Removed message from database after delivery: {} ", messageId);
+    }
+
+    @Override
+    public long getNumberOfScheduledNotifications() {
+       return databaseHelper.findAllNotifications().size();
     }
 }

@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 public class SimpleNotificationSchedulerService implements NotificationSchedulerService{
@@ -118,4 +119,8 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
         return isRunning;
     }
 
+    @Override
+    public long getNumberOfScheduledNotifications() {
+        return scheduleTaskHashMap.values().stream().map(HashSet::size).mapToLong(Integer::longValue).sum();
+    }
 }
