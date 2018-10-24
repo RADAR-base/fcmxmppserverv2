@@ -42,7 +42,7 @@ public class EntryPoint{
         }
     }
 
-    public static void main(String[] args) throws SmackException, IOException {
+    public static void main(String[] args) {
         final CommandLineArgs commandLineArgs = new CommandLineArgs();
         final JCommander parser = JCommander.newBuilder().addObject(commandLineArgs).build();
         try {
@@ -109,7 +109,7 @@ public class EntryPoint{
                     break;
 
                 case Config.SCHEDULER_SERVER:
-                    commandLineArgs.dbPath = "//localhost/notification";
+                    commandLineArgs.dbPath = "//localhost:9001/notification";
             }
         }
     }
