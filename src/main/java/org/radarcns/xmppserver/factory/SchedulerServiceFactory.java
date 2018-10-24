@@ -22,6 +22,9 @@ public class SchedulerServiceFactory {
             case Config.SCHEDULER_PERSISTENT:
                 return PersistentDatabaseNotificationSchedulerService.getInstance();
 
+            case Config.SCHEDULER_SERVER:
+                return ServerDatabaseNotificationSchedulerService.getInstance();
+
             case Config.SCHEDULER_SIMPLE:
                 return SimpleNotificationSchedulerService.getInstance();
 

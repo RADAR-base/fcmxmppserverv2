@@ -106,7 +106,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     this.notificationSchedulerService = SchedulerServiceFactory.getSchedulerService(schedulerType);
     logger.info("Using Scheduler Service of type : {}", this.notificationSchedulerService.getClass().getName());
 
-    // Remove requests after every 30s or 100 records and schedule them
+    // Remove requests after every cacheExpiry and schedule them
     scheduleCache = new ScheduleCache(CommandLineArgs.cacheExpiry, this.notificationSchedulerService);
   }
 
@@ -336,7 +336,6 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         break;
 
       case Util.BACKEND_ACTION_CANCEL:
-        // TODO test this and re-enable
         String type = inMessage.getDataPayload().get("cancelType");
         // Use a new thread to gain a lock so other threads cannot schedule/cancel while this is cancelling
         new Thread(() -> {

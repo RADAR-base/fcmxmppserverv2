@@ -240,6 +240,10 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     }
 
 
+    /** Deprecated function -- Should not be used anymore.
+     * @param oldToken
+     * @param newToken
+     */
     @Override
     public synchronized void updateToken(String oldToken, String newToken) {
         if(isRunning) {

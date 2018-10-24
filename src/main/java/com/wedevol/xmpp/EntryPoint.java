@@ -59,7 +59,18 @@ public class EntryPoint{
             System.exit(0);
         }
 
+        updateWithEnvVars(commandLineArgs);
 
+        if(commandLineArgs.senderId == null || commandLineArgs.senderId.isEmpty()
+                || commandLineArgs.serverKey == null || commandLineArgs.serverKey.isEmpty()) {
+            parser.usage();
+            logger.error("ERROR: Please specify the SENDER KEY and SERVER KEY " +
+                    "either via commandline args or via environment variables. Use -h or --help for more info.");
+        }
+        new EntryPoint(commandLineArgs.senderId, commandLineArgs.serverKey, false, commandLineArgs.schedulerType);
+    }
+
+    private static void updateWithEnvVars(CommandLineArgs commandLineArgs) {
         // Check if System environment variables exist and overwrite the values
 
         commandLineArgs.schedulerType = System.getenv("RADAR_XMPP_SCHEDULER_TYPE") != null ?
@@ -96,15 +107,10 @@ public class EntryPoint{
                 case Config.SCHEDULER_PERSISTENT:
                     commandLineArgs.dbPath = "/usr/hsql/notification";
                     break;
+
+                case Config.SCHEDULER_SERVER:
+                    commandLineArgs.dbPath = "//localhost/notification";
             }
         }
-
-        if(commandLineArgs.senderId == null || commandLineArgs.senderId.isEmpty()
-                || commandLineArgs.serverKey == null || commandLineArgs.serverKey.isEmpty()) {
-            parser.usage();
-            logger.error("ERROR: Please specify the SENDER KEY and SERVER KEY " +
-                    "either via commandline args or via environment variables. Use -h or --help for more info.");
-        }
-        new EntryPoint(commandLineArgs.senderId, commandLineArgs.serverKey, false, commandLineArgs.schedulerType);
     }
 }

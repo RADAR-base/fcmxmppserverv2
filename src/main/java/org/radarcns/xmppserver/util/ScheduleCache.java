@@ -70,6 +70,7 @@ public class ScheduleCache {
      * This stops when the {@link NotificationSchedulerService} is stopped
      * @param interval The fixed interval at which to clean up cache
      *
+     *
      */
     public void runCleanUpTillShutdown(long interval) {
         final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -81,6 +82,8 @@ public class ScheduleCache {
                     logger.info("Running custom maintenance to evict values every {} mins", (interval / 60));
                     if (!currentData.isEmpty()) {
                         pushData();
+                    } else {
+                        lastPush = Instant.now();
                     }
                 } else {
                     logger.warn("Closing the cache Clean Up thread");
