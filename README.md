@@ -22,7 +22,7 @@ The following changes have been introduced -
     ```
     If `ttlSeconds` is not specified the default is set to 28 days. Note that the `time` parameter is in milliseconds (from epoch time) while the `ttlSeconds` is in seconds as apparent from its name.
 4. Currently it supports 3 types of schedulers - simple, in-memory, persistent and server. As the name suggests, simple is just a java thread based scheduler without any DB, in-memory uses an instance of in-memory database, persistent writes database files to disk and server uses an an instance of database server allowing for concurrent access from other apps. We use the HyperSQL DB or HSQL in short as it supports in memory, persistent and server options.
-5. To locally build the server and run it - 
+5. To locally build the xmpp server and run it - 
     ```shell
     ./gradlew clean build
     ```

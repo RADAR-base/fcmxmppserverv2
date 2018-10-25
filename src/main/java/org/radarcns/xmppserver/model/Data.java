@@ -6,12 +6,11 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- *
  * Model class for storing data payload of messages sent upstream.
  *
  * @author yatharth
  */
-public class Data implements Serializable{
+public class Data implements Serializable {
 
     private String from;
     private String messageId;

@@ -61,6 +61,7 @@ public class NotificationDatabaseHelper {
     /**
      * Finds if a particular notification exists in the database.
      * see {@link Notification#equals(Object)} to see the criteria of equality.
+     *
      * @param notification {@link Notification} POJO to compare
      * @return true if exists, otherwise false
      */
@@ -71,8 +72,9 @@ public class NotificationDatabaseHelper {
 
     /**
      * Finds notifications for a particular subject from the databse.
+     *
      * @param subjectId the subject Id of the subject
-     * @param fcmToken the FCM token for the device
+     * @param fcmToken  the FCM token for the device
      * @return {@link List} of {@link Notification}
      */
     public List<Notification> findNotifications(String subjectId, String fcmToken) {
@@ -89,6 +91,7 @@ public class NotificationDatabaseHelper {
 
     /**
      * Finds notifications for a all the subjects from the databse.
+     *
      * @return {@link List} of {@link Notification}
      */
     public List<Notification> findAllNotifications() {
@@ -116,33 +119,34 @@ public class NotificationDatabaseHelper {
                 notification.getTtlSeconds()
         );
 
-        if(result1 == 1 && result2 == 1)
+        if (result1 == 1 && result2 == 1)
             logger.debug("Added the notification : {}", notification);
     }
 
     public void updateDeliveryStatus(boolean status, String fcmToken, String messageId) {
         int result = this.jdbcTemplate.update("update status_info set delivered = ? where fcm_token = ? and fcm_message_id = ?",
                 status, fcmToken, messageId);
-        if(result == 1)
+        if (result == 1)
             logger.debug("Updated delivery status of message id {} and token {} to {}", messageId, fcmToken, status);
     }
 
     public void removeNotification(String taskId) {
         int result = this.jdbcTemplate.update("delete from status_info where notification_task_uuid = ?", taskId);
 
-        if(result == 2)
+        if (result == 2)
             logger.debug("Removed notification for task id {}", taskId);
     }
 
     /**
      * Deletes a notification from both tables as ON DELETE CASCADE is specified.
+     *
      * @param messageId Message Id of the particular notification
-     * @param fcmToken Fcm Token of the device that received/requested the notification
+     * @param fcmToken  Fcm Token of the device that received/requested the notification
      */
     public void removeNotification(String messageId, String fcmToken) {
         int result = this.jdbcTemplate.update("delete from status_info" +
-                        " where fcm_token = ? and fcm_message_id = ?", fcmToken, messageId);
-        if(result == 2)
+                " where fcm_token = ? and fcm_message_id = ?", fcmToken, messageId);
+        if (result == 2)
             logger.debug("Removed notification for Message Id {} and Token {}", messageId, fcmToken);
     }
 
@@ -150,8 +154,9 @@ public class NotificationDatabaseHelper {
      * Removes all the notifications for a particular subject or device token.
      * This follows when a cancel request is made.
      * //TODO Send delivery info to kafka first before removing them
+     *
      * @param subjectId subject ID to remove
-     * @param fcmToken FCM Token to remove the notifications
+     * @param fcmToken  FCM Token to remove the notifications
      */
     public void removeAllNotifications(String subjectId, String fcmToken) {
         int result = this.jdbcTemplate.update("delete from status_info where" +

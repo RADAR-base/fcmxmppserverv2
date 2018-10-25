@@ -40,7 +40,7 @@ public class DataSourceWrapper {
         }
     }
 
-    public DataSource getDataSource(){
+    public DataSource getDataSource() {
         return dataSource;
     }
 

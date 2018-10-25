@@ -64,7 +64,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     @Override
     public void start() {
 
-        if(! isRunning) {
+        if (!isRunning) {
             scheduleDataSourceWrapper.createTableForScheduler();
             databaseHelper.createTableForStatus();
             databaseHelper.createTableforNotification();
@@ -100,22 +100,22 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     private void migrateDataFromScheduler() {
         scheduler.getScheduledExecutions(taskScheduledExecution -> {
             String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
-                Notification notification = (Notification) taskScheduledExecution.getData();
-                if(!databaseHelper.checkIfNotificationExists(notification)) {
-                    try {
-                        databaseHelper.addNotification(notification, String.valueOf(notification.hashCode()), ids[2]);
-                        logger.info("Notification added from scheduler database");
-                    } catch (Exception e) {
-                        logger.error("Cannot insert from scheduler database notification {} due to {}", notification, e.fillInStackTrace());
-                    }
+            Notification notification = (Notification) taskScheduledExecution.getData();
+            if (!databaseHelper.checkIfNotificationExists(notification)) {
+                try {
+                    databaseHelper.addNotification(notification, String.valueOf(notification.hashCode()), ids[2]);
+                    logger.info("Notification added from scheduler database");
+                } catch (Exception e) {
+                    logger.error("Cannot insert from scheduler database notification {} due to {}", notification, e.fillInStackTrace());
                 }
+            }
         });
     }
 
     @Override
     public void stop() {
 
-        if(isRunning) {
+        if (isRunning) {
             isRunning = false;
             scheduler.stop();
             scheduleDataSourceWrapper.close();
@@ -130,6 +130,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
      * {@link User} instead number of {@link Notification}. This is because at a given burst
      * of schedule requests, most of them are going to be from a limited number of users, thus
      * reducing the number of database transactions and improving performance.
+     *
      * @param data {@link Collection} of {@link Data} to be scheduled.
      */
     @Override
@@ -145,7 +146,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
         // TODO: Insert Notifications in batches using batchUpdate()
 
-        for( User user: users) {
+        for (User user : users) {
             Set<Notification> notificationSet = Collections.synchronizedSet(
                     new HashSet<>(databaseHelper.findNotifications(user.getSubjectId(), user.getFcmToken())));
             cacheNotifications.put(user, notificationSet);
@@ -177,7 +178,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     private synchronized void scheduleUsingCache(Notification notification) {
         User user = new User(notification.getSubjectId(), notification.getRecepient());
 
-        if(cacheNotifications.containsKey(user) && !cacheNotifications.get(user).contains(notification)) {
+        if (cacheNotifications.containsKey(user) && !cacheNotifications.get(user).contains(notification)) {
             cacheNotifications.get(user).add(notification);
             addNotification(notification);
         } else {
@@ -189,13 +190,14 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
      * Schedules a single notification. This checks if a notification already exists for a particular subject and FCM token,
      * if it does not exist then schedules a task. The messageId for FCM is generate using Hashcode from the
      * {@link Notification} object as each notification is supposed to be unique.
+     *
      * @param data data object encapsulating the scheduling information
      */
     @Override
     public synchronized void schedule(Data data) {
-        if(isRunning) {
+        if (isRunning) {
             Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
-            if(!databaseHelper.checkIfNotificationExists(notification)) {
+            if (!databaseHelper.checkIfNotificationExists(notification)) {
                 addNotification(notification);
             } else {
                 logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
@@ -207,7 +209,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public synchronized void cancelUsingFcmToken(String from) {
-        if(isRunning) {
+        if (isRunning) {
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
                 if (ids.length == 3 && from.equals(ids[0])) {
@@ -224,7 +226,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public synchronized void cancelUsingCustomId(String id) {
-        if(isRunning) {
+        if (isRunning) {
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 String[] ids = taskScheduledExecution.getTaskInstance().getId().split(Pattern.quote(TASK_ID_DELIMITER));
                 if (ids.length == 3 && id.equals(ids[1])) {
@@ -240,20 +242,22 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     }
 
 
-    /** Deprecated function -- Should not be used anymore.
+    /**
+     * Deprecated function -- Should not be used anymore.
+     *
      * @param oldToken
      * @param newToken
      */
     @Override
     public synchronized void updateToken(String oldToken, String newToken) {
-        if(isRunning) {
+        if (isRunning) {
             // TODO update token based on subject id
             scheduler.getScheduledExecutions(taskScheduledExecution -> {
                 if (taskScheduledExecution.getTaskInstance().getId().contains(oldToken)) {
                     logger.info("Updating token on the scheduled task with id {} from thread {} - {}", taskScheduledExecution.getTaskInstance().getId(),
                             Thread.currentThread().getName(), Thread.currentThread().getId());
                     Notification notification = (Notification) (taskScheduledExecution.getData());
-                    if(notification.getRecepient().equals(oldToken)) {
+                    if (notification.getRecepient().equals(oldToken)) {
                         //notification.setRecepient(newToken);
                     }
                 }
@@ -280,6 +284,6 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public long getNumberOfScheduledNotifications() {
-       return databaseHelper.findAllNotifications().size();
+        return databaseHelper.findAllNotifications().size();
     }
 }

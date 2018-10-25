@@ -11,7 +11,7 @@ public class ServerDatabaseNotificationSchedulerService extends DatabaseNotifica
     }
 
     public static NotificationSchedulerService getInstance() {
-        if(instance == null) {
+        if (instance == null) {
             instance = new ServerDatabaseNotificationSchedulerService();
         }
 

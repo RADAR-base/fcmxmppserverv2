@@ -19,7 +19,7 @@ public class CcsClientWrapper {
     }
 
     public static CcsClientWrapper getInstance() {
-        if(CcsClientWrapperInstance == null) {
+        if (CcsClientWrapperInstance == null) {
             CcsClientWrapperInstance = new CcsClientWrapper(CcsClient.getInstance());
         }
         return CcsClientWrapperInstance;
@@ -33,7 +33,7 @@ public class CcsClientWrapper {
         Map<String, String> notifyMap = new HashMap<>();
         notifyMap.put("title", t.getTitle());
         notifyMap.put("body", t.getMessage());
-        notifyMap.put("sound", "default");
+        //notifyMap.put("sound", "default");
 
         outMessage.setNotificationPayload(notifyMap);
         outMessage.setTimeToLive(t.getTtlSeconds());

@@ -7,10 +7,13 @@ networks:
 
 services:
   hsqldb:
-    build: ./database/ #image: yatharthranjan89/hsqldb
+    build: ./database/
+    image: yatharthranjan89/hsqldb
+    restart: always
     networks:
       - db
-    ports: 9001:9001
+    ports:
+      - 9001:9001
     volumes:
       - ../../xmpp-db:/usr/hsql/
       - ./database/server.properties:/etc/opt/hsqldb/conf/server.properties
@@ -18,6 +21,7 @@ services:
 
   xmppserver:
     build: ../
+    image: radarbase/xmppserver:dev
     restart: always
     networks:
       - default

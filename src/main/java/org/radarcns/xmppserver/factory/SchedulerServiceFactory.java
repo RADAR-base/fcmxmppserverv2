@@ -28,7 +28,8 @@ public class SchedulerServiceFactory {
             case Config.SCHEDULER_SIMPLE:
                 return SimpleNotificationSchedulerService.getInstance();
 
-                default: logger.warn("No Scheduler Service for type : {}, Using a simple " +
+            default:
+                logger.warn("No Scheduler Service for type : {}, Using a simple " +
                         "notification scheduler service", type);
                 return SimpleNotificationSchedulerService.getInstance();
         }

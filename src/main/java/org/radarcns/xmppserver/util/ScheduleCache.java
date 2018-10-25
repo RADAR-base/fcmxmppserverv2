@@ -27,7 +27,7 @@ public class ScheduleCache {
 
     private Logger logger = LoggerFactory.getLogger(ScheduleCache.class);
     private Set<Data> currentData;
-    private  Temporal lastPush;
+    private Temporal lastPush;
     private ScheduledFuture<?> scheduledFuture = null;
 
     private final Duration scheduleAfter;
@@ -36,7 +36,8 @@ public class ScheduleCache {
     /**
      * Creates a time based cache that removes records based on an expiry time
      * and/or maximum size of the number of records.
-     * @param expiry expiry time after which records to be removed from the cache in seconds
+     *
+     * @param expiry                       expiry time after which records to be removed from the cache in seconds
      * @param notificationSchedulerService the {@link NotificationSchedulerService} to use for scheduling
      *                                     the notification upon removal of records from the cache
      */
@@ -49,7 +50,7 @@ public class ScheduleCache {
 
     public void add(Data data) {
         logger.info("Adding data to cache...");
-        if(NotificationDatabaseHelper.isThresholdPassed(lastPush, scheduleAfter)
+        if (NotificationDatabaseHelper.isThresholdPassed(lastPush, scheduleAfter)
                 && currentData.size() > 10) {
             logger.info("Scheduling all notifications after {} seconds", scheduleAfter);
             pushData();
@@ -68,9 +69,8 @@ public class ScheduleCache {
      * are no operations (read or write) on the cache. Should only be run after the
      * {@link NotificationSchedulerService} has been started.
      * This stops when the {@link NotificationSchedulerService} is stopped
+     *
      * @param interval The fixed interval at which to clean up cache
-     *
-     *
      */
     public void runCleanUpTillShutdown(long interval) {
         final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
