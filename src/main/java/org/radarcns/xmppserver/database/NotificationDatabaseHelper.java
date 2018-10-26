@@ -1,5 +1,6 @@
 package org.radarcns.xmppserver.database;
 
+import org.radarcns.xmppserver.model.ExpandedNotification;
 import org.radarcns.xmppserver.model.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +106,23 @@ public class NotificationDatabaseHelper {
         return notifications;
     }
 
+
+    /**
+     * Finds delivered notifications for a all the subjects from the databse.
+     *
+     * @return {@link List} of {@link Notification}
+     */
+    public List<ExpandedNotification> findAllDeliveredNotifications() {
+
+        List<ExpandedNotification> notifications = this.jdbcTemplate.query("select status_info.subject_id, status_info.fcm_token," +
+                        " status_info.notification_task_uuid, status_info.fcm_message_id, status_info.delivered, notification_info.title, notification_info.ttl_seconds," +
+                        " notification_info.message, notification_info.execution_time from notification_info inner join status_info" +
+                        " on notification_info.notification_task_uuid = status_info.notification_task_uuid where status_info.delivered = ?", new Object[]{true}
+                , new ExpandedNotificationRowMapper());
+
+        return notifications;
+    }
+
     public void addNotification(Notification notification, String messageId, String taskId) {
         int result1 = this.jdbcTemplate.update("insert into status_info values (?,?,?,?,?)",
                 notification.getSubjectId(),
@@ -166,6 +184,24 @@ public class NotificationDatabaseHelper {
     }
 
     /**
+     * Removes all the undelivered notifications for a particular subject or device token.
+     * This follows when a cancel request is made.
+     *
+     * @param subjectId subject ID to remove
+     * @param fcmToken  FCM Token to remove the notifications
+     */
+    public void removeAllUndeliveredNotifications(String subjectId, String fcmToken) {
+        int result = this.jdbcTemplate.update("delete from status_info where" +
+                " delivered = ? and (subject_id = ? or fcm_token = ?)", false, subjectId, fcmToken);
+        logger.debug("{} notifications removed from database for subject={} and token={}"
+                , result, subjectId, fcmToken);
+    }
+
+    public void removeDeliveredNotificationsOlderThan(long olderThanMillis) {
+
+    }
+
+    /**
      * Whether a given temporal threshold is passed, compared to given time.
      */
     public static boolean isThresholdPassed(Temporal time, Duration duration) {
@@ -182,6 +218,23 @@ public class NotificationDatabaseHelper {
                     .setRecepient(rs.getString("fcm_token"))
                     .setSubjectId(rs.getString("subject_id"))
                     .setTtlSeconds(rs.getInt("ttl_seconds"))
+                    .build();
+        }
+    }
+
+    private class ExpandedNotificationRowMapper implements RowMapper<ExpandedNotification> {
+        @Override
+        public ExpandedNotification mapRow(ResultSet rs, int rowNum) throws SQLException {
+            return new ExpandedNotification.Builder(new Notification.Builder().setTitle(rs.getString("title"))
+                    .setMessage(rs.getString("message"))
+                    .setScheduledTime(new Date(Long.parseLong(rs.getString("execution_time"))))
+                    .setRecepient(rs.getString("fcm_token"))
+                    .setSubjectId(rs.getString("subject_id"))
+                    .setTtlSeconds(rs.getInt("ttl_seconds"))
+                    .build())
+                    .delivered(rs.getBoolean("delivered"))
+                    .fcmMessageId("fcm_message_id")
+                    .notificationTaskUuid("notification_task_uuid")
                     .build();
         }
     }

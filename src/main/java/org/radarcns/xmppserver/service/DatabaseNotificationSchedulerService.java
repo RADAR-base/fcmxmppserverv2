@@ -218,7 +218,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
-            databaseHelper.removeAllNotifications(null, from);
+            databaseHelper.removeAllUndeliveredNotifications(null, from);
         } else {
             logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
@@ -235,7 +235,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
-            databaseHelper.removeAllNotifications(id, null);
+            databaseHelper.removeAllUndeliveredNotifications(id, null);
         } else {
             logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
@@ -275,11 +275,11 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     @Override
     public void confirmDelivery(String messageId, String token) {
         // TODO: Uncomment so kafka sender can pick this up from the Database
-        //databaseHelper.updateDeliveryStatus(true, token, messageId);
+        databaseHelper.updateDeliveryStatus(true, token, messageId);
 
         // TODO: remove this and add in the Batched Kafka Sender
-        databaseHelper.removeNotification(messageId, token);
-        logger.info("Removed message from database after delivery: {} ", messageId);
+        //databaseHelper.removeNotification(messageId, token);
+        logger.info("Updated delivery status: {} ", messageId);
     }
 
     @Override
