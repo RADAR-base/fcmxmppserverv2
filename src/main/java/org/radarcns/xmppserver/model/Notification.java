@@ -5,12 +5,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
 /**
  * Notification model class for the XMPP Server
  *
  * @author yatharthranjan
  */
-public class Notification implements Serializable{
+public class Notification implements Serializable {
 
     private final String title;
     private final String message;
@@ -20,7 +21,7 @@ public class Notification implements Serializable{
     // time to live or expiry in seconds
     private int ttlSeconds;
 
-    private Notification(Builder builder){
+    private Notification(Builder builder) {
         this.title = builder.title;
         this.message = builder.message;
         this.scheduledTime = builder.scheduledTime;
@@ -123,7 +124,7 @@ public class Notification implements Serializable{
         // time to live or expiry in seconds
         private int ttlSeconds;
 
-        public Builder(){
+        public Builder() {
             // Do nothing
         }
 

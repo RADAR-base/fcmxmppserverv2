@@ -1,6 +1,6 @@
 package org.radarcns.xmppserver.service;
 
-public class PersistentDatabaseNotificationSchedulerService extends DatabaseNotificationSchedulerService{
+public class PersistentDatabaseNotificationSchedulerService extends DatabaseNotificationSchedulerService {
 
     private static final String TYPE = "file";
 
@@ -11,7 +11,7 @@ public class PersistentDatabaseNotificationSchedulerService extends DatabaseNoti
     }
 
     public static NotificationSchedulerService getInstance() {
-        if(instance == null) {
+        if (instance == null) {
             instance = new PersistentDatabaseNotificationSchedulerService();
         }
         return instance;

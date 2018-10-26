@@ -9,10 +9,12 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.Temporal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -24,45 +26,42 @@ import java.util.concurrent.TimeUnit;
 public class ScheduleCache {
 
     private Logger logger = LoggerFactory.getLogger(ScheduleCache.class);
+    private Set<Data> currentData;
+    private Temporal lastPush;
+    private ScheduledFuture<?> scheduledFuture = null;
 
-    private List<Data> currentData;
-    private  Temporal lastPush;
     private final Duration scheduleAfter;
     private final NotificationSchedulerService notificationSchedulerService;
 
     /**
      * Creates a time based cache that removes records based on an expiry time
      * and/or maximum size of the number of records.
-     * @param expiry expiry time after which records to be removed from the cache in seconds
+     *
+     * @param expiry                       expiry time after which records to be removed from the cache in seconds
      * @param notificationSchedulerService the {@link NotificationSchedulerService} to use for scheduling
      *                                     the notification upon removal of records from the cache
      */
     public ScheduleCache(long expiry, NotificationSchedulerService notificationSchedulerService) {
-/*        dataCache = CacheBuilder.newBuilder()
-                .maximumSize(maxSize)
-                .expireAfterWrite(expiry, TimeUnit.MILLISECONDS)
-                .removalListener(this)
-                .build();*/
         this.notificationSchedulerService = notificationSchedulerService;
-        this.currentData = new ArrayList<>();
+        this.currentData = Collections.synchronizedSet(new HashSet<>());
         lastPush = Instant.MIN;
         scheduleAfter = Duration.ofSeconds(expiry);
     }
 
     public void add(Data data) {
         logger.info("Adding data to cache...");
-        if(NotificationDatabaseHelper.isThresholdPassed(lastPush, scheduleAfter)
+        if (NotificationDatabaseHelper.isThresholdPassed(lastPush, scheduleAfter)
                 && currentData.size() > 10) {
             logger.info("Scheduling all notifications after {} seconds", scheduleAfter);
-            synchronized (this) {
-                lastPush = Instant.now();
-                currentData.add(data);
-                notificationSchedulerService.schedule(currentData);
-                currentData = new ArrayList<>();
-            }
-        } else {
-            currentData.add(data);
+            pushData();
         }
+        currentData.add(data);
+    }
+
+    private synchronized void pushData() {
+        notificationSchedulerService.schedule(currentData);
+        currentData = Collections.synchronizedSet(new HashSet<>());
+        lastPush = Instant.now();
     }
 
     /**
@@ -70,27 +69,30 @@ public class ScheduleCache {
      * are no operations (read or write) on the cache. Should only be run after the
      * {@link NotificationSchedulerService} has been started.
      * This stops when the {@link NotificationSchedulerService} is stopped
-     * @param interval The fixed interval at which to clean up cache
      *
+     * @param interval The fixed interval at which to clean up cache
      */
     public void runCleanUpTillShutdown(long interval) {
-        final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+        final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
-        executorService.scheduleAtFixedRate(() -> {
-            if(notificationSchedulerService.isRunning()) {
-                if(!currentData.isEmpty()) {
+        // Only start the task if its not already running
+        if (scheduledFuture == null || scheduledFuture.isCancelled() || scheduledFuture.isDone()) {
+            scheduledFuture = executorService.scheduleAtFixedRate(() -> {
+                if (notificationSchedulerService.isRunning()) {
                     logger.info("Running custom maintenance to evict values every {} mins", (interval / 60));
-                    synchronized (this) {
+                    if (!currentData.isEmpty()) {
+                        pushData();
+                    } else {
                         lastPush = Instant.now();
-                        notificationSchedulerService.schedule(currentData);
-                        currentData = new ArrayList<>();
                     }
+                } else {
+                    logger.warn("Closing the cache Clean Up thread");
+                    executorService.shutdownNow();
                 }
-            } else {
-                logger.warn("Closing the cache Clean Up thread");
-                executorService.shutdownNow();
-            }
-        }, interval, interval, TimeUnit.SECONDS);
+            }, interval, interval, TimeUnit.SECONDS);
+        } else {
+            logger.info("The cache clean up task is already running");
+        }
     }
 }
 

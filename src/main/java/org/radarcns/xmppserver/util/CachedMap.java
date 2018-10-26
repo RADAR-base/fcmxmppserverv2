@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 /**
  * Map that caches the result of a list for a limited time.
- *
+ * <p>
  * <p>This class is thread-safe if given retriever and key extractors are thread-safe.
  */
 public class CachedMap<S, T> {
@@ -30,10 +30,10 @@ public class CachedMap<S, T> {
      * Map that retrieves data from a supplier and converts that to a map with given key extractor.
      * Given retriever and key extractor should be thread-safe to make this class thread-safe.
      *
-     * @param retriever supplier of data.
-     * @param keyExtractor key extractor of individial data points.
+     * @param retriever       supplier of data.
+     * @param keyExtractor    key extractor of individial data points.
      * @param invalidateAfter invalidate the set of valid results after this duration.
-     * @param retryAfter retry on a missing key after this duration.
+     * @param retryAfter      retry on a missing key after this duration.
      */
     public CachedMap(ThrowingSupplier<? extends Collection<T>> retriever,
                      Function<T, S> keyExtractor, Duration invalidateAfter, Duration retryAfter) {
@@ -86,7 +86,7 @@ public class CachedMap<S, T> {
      *
      * @param key key of the value to find.
      * @return element
-     * @throws IOException if the cache cannot be refreshed.
+     * @throws IOException            if the cache cannot be refreshed.
      * @throws NoSuchElementException if the element is not found.
      */
     public T get(S key) throws IOException, NoSuchElementException {

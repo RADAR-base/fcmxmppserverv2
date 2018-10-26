@@ -9,17 +9,17 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class ScheduleTask<E extends Notification>{
+public class ScheduleTask<E extends Notification> {
 
     private E data;
 
     private ScheduledFuture<?> scheduledFuture;
 
-    ScheduleTask(E data){
+    ScheduleTask(E data) {
         this.data = data;
     }
 
-    public ScheduleTask<E> scheduleForDate(){
+    public ScheduleTask<E> scheduleForDate() {
         Date now = new Date();
         long delay = data.getScheduledTime().getTime() - now.getTime();
         ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();

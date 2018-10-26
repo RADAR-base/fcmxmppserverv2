@@ -6,9 +6,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 
-public class SimpleNotificationSchedulerService implements NotificationSchedulerService{
+public class SimpleNotificationSchedulerService implements NotificationSchedulerService {
 
     protected static final Logger logger = LoggerFactory.getLogger(SimpleNotificationSchedulerService.class);
     private HashMap<String, HashSet<ScheduleTask<Notification>>> scheduleTaskHashMap;
@@ -25,7 +26,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
         logger.info(notification.toString());
 
         if (scheduleTaskHashMap.containsKey(data.getFrom())) {
-            if (! scheduleTaskHashMap.get(data.getFrom()).contains(notificationScheduleTask)) {
+            if (!scheduleTaskHashMap.get(data.getFrom()).contains(notificationScheduleTask)) {
                 scheduleTaskHashMap.get(data.getFrom()).add(notificationScheduleTask);
             }
         } else {
@@ -37,8 +38,8 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     }
 
     private synchronized void cancelAllNotifications(String partOfKey) {
-        for(String key: scheduleTaskHashMap.keySet()) {
-            if(key.contains(partOfKey)) {
+        for (String key : scheduleTaskHashMap.keySet()) {
+            if (key.contains(partOfKey)) {
                 scheduleTaskHashMap.get(key).forEach(s -> s.getScheduledFuture().cancel(true));
                 scheduleTaskHashMap.remove(key);
             }
@@ -46,7 +47,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     }
 
     public static NotificationSchedulerService getInstance() {
-        if(instance == null) {
+        if (instance == null) {
             instance = new SimpleNotificationSchedulerService();
         }
         return instance;
@@ -54,7 +55,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     @Override
     public void start() {
-        if(!isRunning) {
+        if (!isRunning) {
             scheduleTaskHashMap = new HashMap<>();
             isRunning = true;
         } else {
@@ -64,7 +65,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     @Override
     public void stop() {
-        if(isRunning) {
+        if (isRunning) {
             isRunning = false;
             // Stop all scheduled tasks
             for (String key : scheduleTaskHashMap.keySet()) {
@@ -78,7 +79,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     @Override
     public void schedule(Data data) {
-        if(isRunning) {
+        if (isRunning) {
             scheduleNotificationForDate(data);
         } else {
             logger.warn("Cannot schedule using an instance of {} when it is not running.", SimpleNotificationSchedulerService.class.getName());
@@ -86,7 +87,7 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
     }
 
     @Override
-    public void schedule(List<Data> data) {
+    public void schedule(Collection<Data> data) {
         data.forEach(this::schedule);
     }
 
@@ -118,4 +119,8 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
         return isRunning;
     }
 
+    @Override
+    public long getNumberOfScheduledNotifications() {
+        return scheduleTaskHashMap.values().stream().map(HashSet::size).mapToLong(Integer::longValue).sum();
+    }
 }
