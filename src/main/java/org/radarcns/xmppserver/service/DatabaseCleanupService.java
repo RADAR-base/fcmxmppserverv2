@@ -2,6 +2,7 @@ package org.radarcns.xmppserver.service;
 
 import org.radarcns.xmppserver.database.NotificationDatabaseHelper;
 import org.radarcns.xmppserver.model.ExpandedNotification;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
@@ -13,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 public class DatabaseCleanupService implements CleanupService {
 
     private NotificationDatabaseHelper notificationDatabaseHelper;
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DatabaseCleanupService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DatabaseCleanupService.class);
 
     DatabaseCleanupService(NotificationDatabaseHelper notificationDatabaseHelper) {
         this.notificationDatabaseHelper = notificationDatabaseHelper;

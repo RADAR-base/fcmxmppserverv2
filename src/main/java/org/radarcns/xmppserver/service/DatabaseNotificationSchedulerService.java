@@ -70,8 +70,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
         long nightTime3am = LocalDateTime.now().until(LocalDate.now().plusDays(1).atStartOfDay().plus(Duration.ofHours(3)), ChronoUnit.MINUTES);
         // Clean the DB every day looking for delivered notifications older than 30 days
-        databaseCleanupTask = new DefaultDatabaseCleanupTask(nightTime3am, TimeUnit.DAYS, 1,
-                TimeUnit.DAYS, 30, new DatabaseCleanupService(databaseHelper));
+        databaseCleanupTask = new DefaultDatabaseCleanupTask(nightTime3am, TimeUnit.DAYS, CommandLineArgs.notificationCleanUpinterval,
+                TimeUnit.DAYS, CommandLineArgs.notificationExpiry, new DatabaseCleanupService(databaseHelper));
     }
 
     @Override
