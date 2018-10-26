@@ -20,7 +20,7 @@ import org.radarcns.xmppserver.config.Config;
  *
  * @author yatharthranjan
  */
-public class EntryPoint{
+public class EntryPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(EntryPoint.class);
 
@@ -42,7 +42,7 @@ public class EntryPoint{
         }
     }
 
-    public static void main(String[] args) throws SmackException, IOException {
+    public static void main(String[] args) {
         final CommandLineArgs commandLineArgs = new CommandLineArgs();
         final JCommander parser = JCommander.newBuilder().addObject(commandLineArgs).build();
         try {
@@ -59,7 +59,18 @@ public class EntryPoint{
             System.exit(0);
         }
 
+        updateWithEnvVars(commandLineArgs);
 
+        if (commandLineArgs.senderId == null || commandLineArgs.senderId.isEmpty()
+                || commandLineArgs.serverKey == null || commandLineArgs.serverKey.isEmpty()) {
+            parser.usage();
+            logger.error("ERROR: Please specify the SENDER KEY and SERVER KEY " +
+                    "either via commandline args or via environment variables. Use -h or --help for more info.");
+        }
+        new EntryPoint(commandLineArgs.senderId, commandLineArgs.serverKey, false, commandLineArgs.schedulerType);
+    }
+
+    private static void updateWithEnvVars(CommandLineArgs commandLineArgs) {
         // Check if System environment variables exist and overwrite the values
 
         commandLineArgs.schedulerType = System.getenv("RADAR_XMPP_SCHEDULER_TYPE") != null ?
@@ -80,13 +91,13 @@ public class EntryPoint{
         commandLineArgs.dbPass = System.getenv("RADAR_XMPP_DB_PASS") != null ?
                 System.getenv("RADAR_XMPP_DB_PASS") : commandLineArgs.dbPass;
 
-        commandLineArgs.cacheExpiry = System.getenv("RADAR_XMPP_CACHE_EXPIRY") !=null ?
+        commandLineArgs.cacheExpiry = System.getenv("RADAR_XMPP_CACHE_EXPIRY") != null ?
                 Long.valueOf(System.getenv("RADAR_XMPP_CACHE_EXPIRY")) : commandLineArgs.cacheExpiry;
 
-        commandLineArgs.cacheCleanUpInterval = System.getenv("RADAR_XMPP_CACHE_CLEANUP_INTERVAL") !=null ?
+        commandLineArgs.cacheCleanUpInterval = System.getenv("RADAR_XMPP_CACHE_CLEANUP_INTERVAL") != null ?
                 Long.valueOf(System.getenv("RADAR_XMPP_CACHE_CLEANUP_INTERVAL")) : commandLineArgs.cacheCleanUpInterval;
 
-        if(! commandLineArgs.schedulerType.equals(Config.SCHEDULER_SIMPLE)
+        if (!commandLineArgs.schedulerType.equals(Config.SCHEDULER_SIMPLE)
                 && (commandLineArgs.dbPath == null || commandLineArgs.dbPath.isEmpty())) {
             switch (commandLineArgs.schedulerType) {
                 case Config.SCHEDULER_MEM:
@@ -96,15 +107,10 @@ public class EntryPoint{
                 case Config.SCHEDULER_PERSISTENT:
                     commandLineArgs.dbPath = "/usr/hsql/notification";
                     break;
+
+                case Config.SCHEDULER_SERVER:
+                    commandLineArgs.dbPath = "//localhost:9001/notification";
             }
         }
-
-        if(commandLineArgs.senderId == null || commandLineArgs.senderId.isEmpty()
-                || commandLineArgs.serverKey == null || commandLineArgs.serverKey.isEmpty()) {
-            parser.usage();
-            logger.error("ERROR: Please specify the SENDER KEY and SERVER KEY " +
-                    "either via commandline args or via environment variables. Use -h or --help for more info.");
-        }
-        new EntryPoint(commandLineArgs.senderId, commandLineArgs.serverKey, false, commandLineArgs.schedulerType);
     }
 }
