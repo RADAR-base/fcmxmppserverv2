@@ -59,4 +59,14 @@ public class ExpandedNotification {
             return new ExpandedNotification(this);
         }
     }
+
+    @Override
+    public String toString() {
+        return "ExpandedNotification{" +
+                "notificationTaskUuid='" + notificationTaskUuid + '\'' +
+                ", delivered=" + delivered +
+                ", fcmMessageId='" + fcmMessageId + '\'' +
+                ", notification=" + notification +
+                '}';
+    }
 }

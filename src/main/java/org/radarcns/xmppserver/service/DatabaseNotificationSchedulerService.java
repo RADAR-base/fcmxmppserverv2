@@ -8,6 +8,8 @@ import org.apache.commons.dbcp.BasicDataSource;
 import org.radarcns.xmppserver.ccs.CcsClientWrapper;
 import org.radarcns.xmppserver.commandline.CommandLineArgs;
 import org.radarcns.xmppserver.database.DataSourceWrapper;
+import org.radarcns.xmppserver.database.DatabaseCleanupTask;
+import org.radarcns.xmppserver.database.DefaultDatabaseCleanupTask;
 import org.radarcns.xmppserver.database.NotificationDatabaseHelper;
 import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.model.Notification;
@@ -15,7 +17,12 @@ import org.radarcns.xmppserver.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -34,6 +41,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     private final DataSourceWrapper scheduleDataSourceWrapper;
     private final NotificationDatabaseHelper databaseHelper;
     private OneTimeTask<Notification> notificationOneTimeTask;
+    private final DatabaseCleanupTask databaseCleanupTask;
     private boolean isRunning = false;
 
     private static final String TASK_NAME = "notification-one-time";
@@ -59,6 +67,11 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         dataSource.setPassword(CommandLineArgs.dbPass);
         this.databaseHelper = new NotificationDatabaseHelper(dataSource);
         this.cacheNotifications = Collections.synchronizedMap(new HashMap<>());
+
+        long nightTime3am = LocalDateTime.now().until(LocalDate.now().plusDays(1).atStartOfDay().plus(Duration.ofHours(3)), ChronoUnit.MINUTES);
+        // Clean the DB every day looking for delivered notifications older than 30 days
+        databaseCleanupTask = new DefaultDatabaseCleanupTask(nightTime3am, TimeUnit.DAYS, 1,
+                TimeUnit.DAYS, 30, new DatabaseCleanupService(databaseHelper));
     }
 
     @Override
@@ -81,6 +94,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                     .build();
 
             scheduler.start();
+
+            databaseCleanupTask.startCleanup();
 
             Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
             migrateDataFromScheduler();
@@ -117,6 +132,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
         if (isRunning) {
             isRunning = false;
+            databaseCleanupTask.stopCleanup();
             scheduler.stop();
             scheduleDataSourceWrapper.close();
         } else {
@@ -274,7 +290,6 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public void confirmDelivery(String messageId, String token) {
-        // TODO: Uncomment so kafka sender can pick this up from the Database
         databaseHelper.updateDeliveryStatus(true, token, messageId);
 
         // TODO: remove this and add in the Batched Kafka Sender

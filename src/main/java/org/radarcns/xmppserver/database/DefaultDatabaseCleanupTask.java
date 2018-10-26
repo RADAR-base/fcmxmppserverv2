@@ -17,21 +17,28 @@ public class DefaultDatabaseCleanupTask implements DatabaseCleanupTask{
     private final static Logger logger = LoggerFactory.getLogger(DefaultDatabaseCleanupTask.class);
     private final TimeUnit intervalTimeUnit;
     private final long interval;
+    private final TimeUnit expiryTimeUnit;
     private final long expiry;
+    private final long startTime;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final CleanupService cleanupService;
 
     /**
      * Initialise the cleanup thread.
+     * @param startTime The milliseconds from now, when to start the cleanup thread.
      * @param intervalTimeUnit TimeUnit to consider for intervalValue to periodically run this thread.
      * @param intervalValue How often to run this thread. Specified in intervalTimeUnit.
      * @param expiry How old notifications are considered expired. Should be specified in days.
+     * @param expiryTimeUnit TimeUnit to consider for expiry
+     *
      */
-    public DefaultDatabaseCleanupTask(TimeUnit intervalTimeUnit, long intervalValue, long expiry, CleanupService cleanupService) {
+    public DefaultDatabaseCleanupTask(long startTime, TimeUnit intervalTimeUnit, long intervalValue, TimeUnit expiryTimeUnit, long expiry, CleanupService cleanupService) {
         this.interval = intervalValue;
         this.expiry = expiry;
         this.intervalTimeUnit = intervalTimeUnit;
         this.cleanupService = cleanupService;
+        this.expiryTimeUnit = expiryTimeUnit;
+        this.startTime = startTime;
     }
 
     /**
@@ -40,16 +47,20 @@ public class DefaultDatabaseCleanupTask implements DatabaseCleanupTask{
      */
     @Override
     public void startCleanup() {
-        Long nightTime3am = LocalDateTime.now().until(LocalDate.now().plusDays(1).atStartOfDay().plus(Duration.ofHours(3)), ChronoUnit.MINUTES);
         scheduler.scheduleAtFixedRate(() -> {
             logger.info("Running Clean Up task to remove delivered notifications");
-            cleanupService.removeNotifications(expiry);
-        }, nightTime3am, interval, intervalTimeUnit);
+            cleanupService.removeNotifications(expiryTimeUnit, expiry);
+        }, startTime, interval, intervalTimeUnit);
     }
 
     @Override
     public void stopCleanup() {
-
+        scheduler.shutdown();
+        try {
+            scheduler.awaitTermination(1, TimeUnit.DAYS);
+        } catch (InterruptedException ex) {
+            logger.error("Database Cleanup Thread interrupted during shutdown", ex);
+        }
     }
 
 }

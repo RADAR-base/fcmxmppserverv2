@@ -72,7 +72,7 @@ public class NotificationDatabaseHelper {
     }
 
     /**
-     * Finds notifications for a particular subject from the databse.
+     * Finds undelivered notifications for a particular subject from the database.
      *
      * @param subjectId the subject Id of the subject
      * @param fcmToken  the FCM token for the device
@@ -84,8 +84,8 @@ public class NotificationDatabaseHelper {
                         " status_info.notification_task_uuid, notification_info.title, notification_info.ttl_seconds," +
                         " notification_info.message, notification_info.execution_time from notification_info inner join status_info" +
                         " on notification_info.notification_task_uuid = status_info.notification_task_uuid where status_info.subject_id = ?" +
-                        " and status_info.fcm_token = ?"
-                , new Object[]{subjectId, fcmToken}, new NotificationRowMapper());
+                        " and status_info.fcm_token = ? and status_info.delivered = ?"
+                , new Object[]{subjectId, fcmToken, false}, new NotificationRowMapper());
 
         return notifications;
     }
@@ -233,8 +233,8 @@ public class NotificationDatabaseHelper {
                     .setTtlSeconds(rs.getInt("ttl_seconds"))
                     .build())
                     .delivered(rs.getBoolean("delivered"))
-                    .fcmMessageId("fcm_message_id")
-                    .notificationTaskUuid("notification_task_uuid")
+                    .fcmMessageId(rs.getString("fcm_message_id"))
+                    .notificationTaskUuid(rs.getString("notification_task_uuid"))
                     .build();
         }
     }
