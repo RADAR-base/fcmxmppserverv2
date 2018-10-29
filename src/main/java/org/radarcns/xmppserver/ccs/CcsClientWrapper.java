@@ -33,7 +33,7 @@ public class CcsClientWrapper {
         Map<String, String> notifyMap = new HashMap<>();
         notifyMap.put("title", t.getTitle());
         notifyMap.put("body", t.getMessage());
-        //notifyMap.put("sound", "default");
+        notifyMap.put("sound", "default");
 
         outMessage.setNotificationPayload(notifyMap);
         outMessage.setTimeToLive(t.getTtlSeconds());
