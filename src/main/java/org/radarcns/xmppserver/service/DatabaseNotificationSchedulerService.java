@@ -28,10 +28,11 @@ import java.util.stream.Collectors;
 
 /**
  * Database notification scheduler service class for the XMPP Server
- * This has functionality for both in-memory and persisent data bases.
+ * This has functionality for both in-memory, persisent and server data bases.
  * Abstract class so has to instantiated through sub-classes. Look at
- * {@link InMemoryDatabaseNotificationSchedulerService} and
- * {@link PersistentDatabaseNotificationSchedulerService}
+ * {@link InMemoryDatabaseNotificationSchedulerService},
+ * {@link PersistentDatabaseNotificationSchedulerService} and
+ * {@link ServerDatabaseNotificationSchedulerService}
  *
  * @author yatharthranjan
  */

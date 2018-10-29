@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class DefaultDatabaseCleanupTask implements DatabaseCleanupTask{
+public class DefaultDatabaseCleanupTask implements DatabaseCleanupTask {
 
     private final static Logger logger = LoggerFactory.getLogger(DefaultDatabaseCleanupTask.class);
     private final TimeUnit intervalTimeUnit;
@@ -25,12 +25,12 @@ public class DefaultDatabaseCleanupTask implements DatabaseCleanupTask{
 
     /**
      * Initialise the cleanup thread.
-     * @param startTime The milliseconds from now, when to start the cleanup thread.
-     * @param intervalTimeUnit TimeUnit to consider for intervalValue to periodically run this thread.
-     * @param intervalValue How often to run this thread. Specified in intervalTimeUnit.
-     * @param expiry How old notifications are considered expired. Should be specified in days.
-     * @param expiryTimeUnit TimeUnit to consider for expiry
      *
+     * @param startTime        The milliseconds from now, when to start the cleanup thread.
+     * @param intervalTimeUnit TimeUnit to consider for intervalValue to periodically run this thread.
+     * @param intervalValue    How often to run this thread. Specified in intervalTimeUnit.
+     * @param expiry           How old notifications are considered expired. Should be specified in days.
+     * @param expiryTimeUnit   TimeUnit to consider for expiry
      */
     public DefaultDatabaseCleanupTask(long startTime, TimeUnit intervalTimeUnit, long intervalValue, TimeUnit expiryTimeUnit, long expiry, CleanupService cleanupService) {
         this.interval = intervalValue;
