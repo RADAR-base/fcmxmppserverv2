@@ -3,7 +3,7 @@ apply plugin: 'maven'
 apply plugin: 'application'
 
 group = 'org.radarcns'
-version = '0.1.3'
+version = '0.1.4-SNAPSHOT'
 
 description = "RADAR FCM XMPP Server"
 
