@@ -80,6 +80,15 @@ distributions {
     }
 }
 
+
+allprojects {
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+        }
+    }
+}
+
 tasks.matching {it instanceof Test}.all {
     def stdout = new LinkedList<String>()
     beforeTest { TestDescriptor td ->

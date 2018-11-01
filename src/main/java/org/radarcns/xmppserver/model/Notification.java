@@ -107,7 +107,13 @@ public class Notification implements Serializable {
         // Set to max of 28 days if not set
         int ttlSeconds = payload.get("ttlSeconds") == null ? 2_419_200 : Integer.valueOf(payload.get("ttlSeconds"));
 
-        Date date = new Date(Long.parseLong(datetime));
+        Date date;
+        try {
+            // First parsed as Double to avoid any errors with decimal points
+            date = new Date(Double.valueOf(datetime).longValue());
+        } catch(NumberFormatException exc) {
+            throw new IllegalArgumentException("The format for the Date Time is not correct.", exc);
+        }
 
         return new Notification.Builder().setTitle(notificationTitle)
                 .setMessage(notificationMessage).setScheduledTime(date).setRecepient(to)
