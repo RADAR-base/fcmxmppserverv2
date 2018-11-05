@@ -52,7 +52,7 @@ public class ScheduleCache {
         logger.info("Adding data to cache...");
         if (NotificationDatabaseHelper.isThresholdPassed(lastPush, scheduleAfter)
                 && currentData.size() > 10) {
-            logger.info("Scheduling all notifications after {} seconds", scheduleAfter);
+            logger.info("Scheduling all notifications after {}", scheduleAfter);
             pushData();
         }
         currentData.add(data);
