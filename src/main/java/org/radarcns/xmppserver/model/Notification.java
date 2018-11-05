@@ -116,7 +116,6 @@ public class Notification implements Serializable {
             logger.error("TTL seconds value is invalid: ", exc);
         }
 
-
         Date date;
         try {
             // First parsed as Double to avoid any errors with decimal points
