@@ -10,10 +10,10 @@
 	</appender>
 
 	<!-- Send debug messages to a file -->
-	<!-- <appender name="FILE"
+	<appender name="FILE"
 		class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>${catalina.home}/logs/xmpp-server-%d{yyyy-MM-dd}.log</fileNamePattern>
+			<fileNamePattern>/usr/local/radar/xmpp-server/logs/xmpp-server-%d{yyyy-MM-dd}.log</fileNamePattern>
 			<maxHistory>7</maxHistory>
 			<totalSizeCap>3GB</totalSizeCap>
 		</rollingPolicy>
@@ -21,12 +21,27 @@
 			<pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%file:%line] %msg%n</pattern>
 		</encoder>
 	</appender>
-	 -->
+
+	<appender name="FILE-ERROR"
+			  class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>/usr/local/radar/xmpp-server/logs/xmpp-server-error-%d{yyyy-MM-dd}.log</fileNamePattern>
+			<maxHistory>7</maxHistory>
+			<totalSizeCap>3GB</totalSizeCap>
+		</rollingPolicy>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%file:%line] %msg%n</pattern>
+		</encoder>>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>ERROR</level>
+		</filter>
+	</appender>
 
 	<!-- level: TRACE < DEBUG < INFO < WARN < ERROR -->
 	<root level="DEBUG">
 		<appender-ref ref="STDOUT" />
-		<!-- <appender-ref ref="FILE" /> -->
+		<appender-ref ref="FILE" />
+		<appender-ref ref="FILE-ERROR" />
 	</root>
 
 </configuration>

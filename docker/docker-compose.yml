@@ -28,6 +28,8 @@ services:
       - db
     depends_on:
       - hsqldb
+    volumes:
+      - ../../xmpp-logs:/usr/local/radar/xmpp-server/logs
     environment:
       RADAR_XMPP_FCM_SENDER_KEY: "1043784930865"
       RADAR_XMPP_FCM_SERVER_KEY: "AAAA8wZuFjE:APA91bHmsDE1mhi1aQrmcTNT--RAofoVdcgc6wkCS1BTeHui4mdwOhaeum_D4dMcaQ4pfe9vuwJWZFWOF9EJ-JN8mkzMZ2Crm7LGK1WD2NMA-xd3xIkoNQx8jU0dySAzhbzWyI5LB9ljvliUgXWVFaj3-uQSZfzfdA"
