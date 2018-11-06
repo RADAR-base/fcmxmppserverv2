@@ -1,5 +1,8 @@
 package org.radarcns.xmppserver.model;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
@@ -20,6 +23,7 @@ public class Notification implements Serializable {
     private final Date scheduledTime;
     // time to live or expiry in seconds
     private int ttlSeconds;
+    private static final Logger logger = LoggerFactory.getLogger(Notification.class);
 
     private Notification(Builder builder) {
         this.title = builder.title;
@@ -104,8 +108,13 @@ public class Notification implements Serializable {
         String notificationMessage = payload.get("notificationMessage");
         String subjectId = payload.get("subjectId") == null ? "null" : payload.get("subjectId");
 
-        // Set to max of 28 days if not set
-        int ttlSeconds = payload.get("ttlSeconds") == null ? 2_419_200 : Integer.valueOf(payload.get("ttlSeconds"));
+        int ttlSeconds = 2_419_200;
+        try {
+            // Set to max of 28 days if not set
+            ttlSeconds = payload.get("ttlSeconds") == null ? 2_419_200 : Integer.valueOf(payload.get("ttlSeconds"));
+        } catch(NumberFormatException exc) {
+            logger.error("TTL seconds value is invalid: ", exc);
+        }
 
         Date date;
         try {

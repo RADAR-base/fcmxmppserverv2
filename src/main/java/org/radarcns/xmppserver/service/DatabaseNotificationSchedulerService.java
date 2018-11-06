@@ -135,10 +135,16 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
      */
     @Override
     public synchronized void schedule(Collection<Data> data) {
-        Set<Notification> notifications = data.stream()
-                .map(s -> Notification.getNotification(s.getFrom(), s.getPayload()))
-                .distinct()
-                .collect(Collectors.toSet());
+
+        Set<Notification> notifications = null;
+        try {
+            notifications = data.stream()
+                    .map(s -> Notification.getNotification(s.getFrom(), s.getPayload()))
+                    .distinct()
+                    .collect(Collectors.toSet());
+        } catch (RuntimeException exc) {
+            logger.error("Error while processing notification data: ", exc);
+        }
 
         Set<User> users = notifications.stream()
                 .map(n -> new User(n.getSubjectId(), n.getRecepient()))
