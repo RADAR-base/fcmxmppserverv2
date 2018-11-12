@@ -108,7 +108,7 @@ public class NotificationDatabaseHelper {
 
 
     /**
-     * Finds delivered notifications for a all the subjects from the databse.
+     * Finds delivered notifications for all the subjects from the databse.
      *
      * @return {@link List} of {@link Notification}
      */
