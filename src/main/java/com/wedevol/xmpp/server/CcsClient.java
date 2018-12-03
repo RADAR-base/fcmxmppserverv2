@@ -16,16 +16,10 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.net.ssl.SSLContext;
 
+import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
-import org.jivesoftware.smack.ConnectionListener;
-import org.jivesoftware.smack.ReconnectionListener;
-import org.jivesoftware.smack.ReconnectionManager;
-import org.jivesoftware.smack.SASLAuthentication;
-import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.NotConnectedException;
-import org.jivesoftware.smack.StanzaListener;
-import org.jivesoftware.smack.XMPPConnection;
-import org.jivesoftware.smack.XMPPException;
+import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ExtensionElementProvider;
 import org.jivesoftware.smack.provider.ProviderManager;
@@ -69,6 +63,8 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     private boolean debuggable = false;
     private String username = null;
     private Boolean isConnectionDraining = false;
+
+    private Boolean isPresenceUnavailable = false;
 
     // downstream messages to sync with acks and nacks
     private final Map<String, Message> syncMessages = new ConcurrentHashMap<>();
@@ -135,6 +131,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         logger.info("Initiating connection ...");
 
         isConnectionDraining = false; // Set connection draining to false when there is a new connection
+        isPresenceUnavailable = false;
 
         // create connection configuration
         XMPPTCPConnection.setUseStreamManagementResumptionDefault(true);
@@ -182,7 +179,27 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
         xmppConn.addSyncStanzaListener(this, stanza -> stanza.hasExtension(Util.FCM_ELEMENT_NAME, Util.FCM_NAMESPACE));
 
         // Log all outgoing packets
-        xmppConn.addStanzaInterceptor(stanza -> logger.info("Sent: {}", stanza.toXML()), ForEveryStanza.INSTANCE);
+        xmppConn.addStanzaInterceptor(stanza -> {
+
+            /**
+             * If the server requested to terminate connection, then the smack library disconnects the connection with
+             * a presence unavailable message as can be seen in {@link XMPPTCPConnection.PacketReader#parsePackets()}
+             * {@code // We received a closing stream element from the server without us
+             * // sending a closing stream element first. This means that the
+             * // server wants to terminate the session, therefore disconnect
+             * // the connection
+             * disconnect(); }
+             *
+             * which calls the {@link AbstractXMPPConnection#disconnect()}.{@link AbstractXMPPConnection#disconnect(Presence)}.
+             * We need to handle this and reconnect if the server asks for disconnection.
+             */
+            if(stanza instanceof Presence && ! ((Presence)stanza).isAvailable()) {
+                logger.info("Reconnect after server requested disconnection.");
+                //reconnect();
+                isPresenceUnavailable = true;
+            }
+            logger.info("Sent: {}", stanza.toXML());
+        }, ForEveryStanza.INSTANCE);
 
         // Set the ping interval
         final PingManager pingManager = PingManager.getInstanceFor(xmppConn);
@@ -487,7 +504,7 @@ public class CcsClient implements StanzaListener, ReconnectionListener, Connecti
     @Override
     public void connectionClosed() {
         logger.info("Connection closed. The current connectionDraining flag is: {}", isConnectionDraining);
-        if (isConnectionDraining) {
+        if (isConnectionDraining || isPresenceUnavailable) {
             reconnect();
         }
     }
