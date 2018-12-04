@@ -14,7 +14,7 @@
 		class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<fileNamePattern>/usr/local/radar/xmpp-server/logs/xmpp-server-%d{yyyy-MM-dd}.log</fileNamePattern>
-			<maxHistory>7</maxHistory>
+			<maxHistory>30</maxHistory>
 			<totalSizeCap>3GB</totalSizeCap>
 		</rollingPolicy>
 		<encoder>
@@ -26,7 +26,7 @@
 			  class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<fileNamePattern>/usr/local/radar/xmpp-server/logs/xmpp-server-error-%d{yyyy-MM-dd}.log</fileNamePattern>
-			<maxHistory>7</maxHistory>
+			<maxHistory>60</maxHistory>
 			<totalSizeCap>3GB</totalSizeCap>
 		</rollingPolicy>
 		<encoder>
