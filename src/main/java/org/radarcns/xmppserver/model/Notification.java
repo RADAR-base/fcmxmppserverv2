@@ -15,7 +15,8 @@ import java.util.Objects;
  * @author yatharthranjan
  */
 public class Notification implements Serializable {
-    private static final long serialVersionUID = 3284965300642907379L;
+    private static final long serialVersionUID = System.getenv("RADAR_NOTIFICATION_SERIAL_UUID") == null ? 3284965300642907379L :
+            Long.valueOf(System.getenv("RADAR_NOTIFICATION_SERIAL_UUID"));
 
     private final String title;
     private final String message;
