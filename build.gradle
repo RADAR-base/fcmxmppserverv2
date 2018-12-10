@@ -3,7 +3,7 @@ apply plugin: 'maven'
 apply plugin: 'application'
 
 group = 'org.radarcns'
-version = '0.1.4'
+version = '0.1.5'
 
 description = "RADAR FCM XMPP Server"
 
@@ -28,7 +28,7 @@ ext {
 }
 
 repositories {
-        
+
      maven { url "http://repo.maven.apache.org/maven2" }
 }
 dependencies {
@@ -39,10 +39,10 @@ dependencies {
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: jacksonVersion
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: jacksonVersion
     compile group: 'com.beust', name: 'jcommander', version: jCommanderVersion
-    compile group: 'org.hsqldb', name: 'hsqldb', version: hsqlVersion
     compile group: 'org.springframework', name: 'spring-jdbc', version: springVersion
     compile group: 'commons-dbcp', name: 'commons-dbcp', version: commonsDbcpVersion
     runtimeOnly group: 'ch.qos.logback', name: 'logback-classic', version: logbackVersion
+    runtimeOnly group: 'org.hsqldb', name: 'hsqldb', version: hsqlVersion
 
     testCompile group: 'junit', name: 'junit', version: junitVersion
 

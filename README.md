@@ -103,6 +103,7 @@ The following changes have been introduced -
 9. As seen above the options can be either set as command line args or as environment variables. The docker image is also published on Docker hub [radarbase/radar-xmppserver](https://hub.docker.com/r/radarbase/fcmxmppserverv2/).
    Also make sure to mount the path of the db as a bind mount to host if using a persistent db otherwise all data will be lost if the container is removed.
 10. Examples of docker-compose builds are included in the `/docker` directory along with a Dockerfile for building and running hsql server in a docker container. These can be used for development or modified for production deployments.
+11. By default, the application logs all messages to file at the path `/usr/local/radar/xmpp-server/logs/`, please make sure to mount your host path to this path to persist the log files. This creates separate rotating files base on time for DEBUG level(and higher, means including all messages except TRACE) and ERROR level(and higher).
 
 # Old README from base
 

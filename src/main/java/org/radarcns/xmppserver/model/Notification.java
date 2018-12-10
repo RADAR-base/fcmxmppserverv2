@@ -15,6 +15,7 @@ import java.util.Objects;
  * @author yatharthranjan
  */
 public class Notification implements Serializable {
+    private static final long serialVersionUID = 3284965300642907379L;
 
     private final String title;
     private final String message;
