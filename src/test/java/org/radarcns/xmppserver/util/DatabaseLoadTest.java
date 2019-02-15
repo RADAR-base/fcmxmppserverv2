@@ -75,7 +75,8 @@ public class DatabaseLoadTest {
 
         assertTrue(mockDataProducer.verifyData(databaseHelper));
 
-        databaseHelper.removeAllNotifications(String.valueOf(1), String.valueOf(1));
+        mockDataProducer.removeData(databaseHelper);
+        //databaseHelper.removeAllNotifications(String.valueOf(1), String.valueOf(1));
     }
 
     @Test(timeout = 480_000)
@@ -95,12 +96,12 @@ public class DatabaseLoadTest {
         assertEquals(numOfTimes * numOfRecords, notificationSchedulerService.getNumberOfScheduledNotifications());
 
         assertTrue(mockDataProducer.verifyData(databaseHelper));
+
+        mockDataProducer.removeData(databaseHelper);
     }
 
     @AfterClass
     public static void clean() {
-        for(int i = 1; i <= 100; i++) {
-            databaseHelper.removeAllNotifications(String.valueOf(i), String.valueOf(i));
-        }
+        mockDataProducer.removeData(databaseHelper);
     }
 }

@@ -22,9 +22,9 @@ public class MockDataProducer {
         int id = 0;
         String subjectId = "1";
         String fcmToken = "1";
-        int numOfTimes = 5;
-        int numOfRecords = 1000;
-        int numOfUsers = 100;
+//        int numOfTimes = 5;
+//        int numOfRecords = 1000;
+//        int numOfUsers = 100;
         /**
          * Run for 5 seconds with ingesting 1000 records from different users per second
          */
@@ -50,15 +50,19 @@ public class MockDataProducer {
     }
 
     public boolean verifyData(NotificationDatabaseHelper databaseHelper) {
-        boolean flag = true;
         long numberOfRecordsPerUser = numOfTimes * (numOfRecords/numOfUsers);
         for(int i = 1; i <= numOfUsers; i++) {
             if(numberOfRecordsPerUser != databaseHelper.findNotifications(String.valueOf(i), String.valueOf(i)).size()) {
-                flag = false;
-                break;
+                return false;
             }
         }
 
-        return flag;
+        return true;
+    }
+
+    public void removeData(NotificationDatabaseHelper databaseHelper) {
+        for(int i = 1; i <= numOfUsers; i++) {
+            databaseHelper.removeAllNotifications(String.valueOf(i), String.valueOf(i));
+        }
     }
 }
