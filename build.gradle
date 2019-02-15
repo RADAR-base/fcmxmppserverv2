@@ -159,5 +159,5 @@ task copyDependencies(type: Copy) {
 }
 
 wrapper {
-    gradleVersion '4.8'
+    gradleVersion '5.0'
 }

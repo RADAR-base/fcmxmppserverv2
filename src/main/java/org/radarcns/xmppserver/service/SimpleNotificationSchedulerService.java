@@ -21,19 +21,21 @@ public class SimpleNotificationSchedulerService implements NotificationScheduler
 
     private synchronized void scheduleNotificationForDate(Data data) {
         Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
-        ScheduleTask<Notification> notificationScheduleTask = new ScheduleTask<>(notification).scheduleForDate();
+        if(notification != null) {
+            ScheduleTask<Notification> notificationScheduleTask = new ScheduleTask<>(notification).scheduleForDate();
 
-        logger.info(notification.toString());
+            logger.info(notification.toString());
 
-        if (scheduleTaskHashMap.containsKey(data.getFrom())) {
-            if (!scheduleTaskHashMap.get(data.getFrom()).contains(notificationScheduleTask)) {
-                scheduleTaskHashMap.get(data.getFrom()).add(notificationScheduleTask);
+            if (scheduleTaskHashMap.containsKey(data.getFrom())) {
+                if (!scheduleTaskHashMap.get(data.getFrom()).contains(notificationScheduleTask)) {
+                    scheduleTaskHashMap.get(data.getFrom()).add(notificationScheduleTask);
+                }
+            } else {
+                HashSet<ScheduleTask<Notification>> newHashSet = new HashSet<>();
+                newHashSet.add(notificationScheduleTask);
+
+                scheduleTaskHashMap.put(data.getFrom() + notification.getSubjectId(), newHashSet);
             }
-        } else {
-            HashSet<ScheduleTask<Notification>> newHashSet = new HashSet<>();
-            newHashSet.add(notificationScheduleTask);
-
-            scheduleTaskHashMap.put(data.getFrom() + notification.getSubjectId(), newHashSet);
         }
     }
 
