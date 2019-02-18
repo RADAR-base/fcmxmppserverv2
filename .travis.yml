@@ -1,0 +1,35 @@
+language: java
+jdk:
+  - oraclejdk8
+sudo: required
+
+services:
+  - docker
+
+env:
+  DOCKER_COMPOSE_VERSION: 1.21.2
+  DC: ~/bin/docker-compose
+  DC_FILE: docker/docker-compose.yml
+
+cache:
+  directories:
+    - $HOME/.gradle/caches/jars-1
+    - $HOME/.gradle/caches/jars-2
+    - $HOME/.gradle/caches/jars-3
+    - $HOME/.gradle/caches/modules-2/files-2.1/
+    - $HOME/.gradle/native
+    - $HOME/.gradle/wrapper
+
+before_install:
+  - ./gradlew downloadDependencies
+  - mkdir -p "$HOME/bin";
+  - export PATH="$PATH:$HOME/bin";
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > $DC;
+  - chmod +x $DC;
+  - sudo mkdir -p /usr/local/hsql/
+  - sudo chown -R $(whoami) /usr/local/hsql
+
+script:
+  - ./gradlew check
+  - sudo $DC -f $DC_FILE up -d && sleep 30
+  - sudo $DC -f $DC_FILE down

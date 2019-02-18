@@ -97,6 +97,13 @@ public class EntryPoint {
         commandLineArgs.cacheCleanUpInterval = System.getenv("RADAR_XMPP_CACHE_CLEANUP_INTERVAL") != null ?
                 Long.valueOf(System.getenv("RADAR_XMPP_CACHE_CLEANUP_INTERVAL")) : commandLineArgs.cacheCleanUpInterval;
 
+        commandLineArgs.notificationCleanUpinterval = System.getenv("RADAR_XMPP_NOTIFICATION_CLEANUP_INTERVAL") != null ?
+                Long.valueOf(System.getenv("RADAR_XMPP_NOTIFICATION_CLEANUP_INTERVAL")) : commandLineArgs.notificationCleanUpinterval;
+
+        commandLineArgs.notificationExpiry = System.getenv("RADAR_XMPP_NOTIFICATION_EXPIRY") != null ?
+                Long.valueOf(System.getenv("RADAR_XMPP_NOTIFICATION_EXPIRY")) : commandLineArgs.notificationExpiry;
+
+
         if (!commandLineArgs.schedulerType.equals(Config.SCHEDULER_SIMPLE)
                 && (commandLineArgs.dbPath == null || commandLineArgs.dbPath.isEmpty())) {
             switch (commandLineArgs.schedulerType) {

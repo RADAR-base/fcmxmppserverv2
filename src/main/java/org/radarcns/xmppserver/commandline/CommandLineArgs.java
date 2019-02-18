@@ -34,6 +34,12 @@ public class CommandLineArgs {
     @Parameter(names = {"-ci", "--cache-cleanup-interval"}, description = "The cache cleanup interval in seconds to perform custom time based eviction of records from cache (In cases where there is not operations on the cache). To increase throughput use a lower value.")
     public static long cacheCleanUpInterval = 120;
 
+    @Parameter(names = {"-ne", "--notification-expiry"}, description = "The notification expiry in days to perform time based eviction of delivered notifications from database. Specified in days.")
+    public static long notificationExpiry = 30;
+
+    @Parameter(names = {"-nc", "--notification-cleanup-interval"}, description = "The notification cleanup interval in days to check for expired delivered notifications. Specified in days.")
+    public static long notificationCleanUpinterval = 1;
+
     @Parameter(names = {"-h", "--help"}, help = true, description = "Display the usage of the program with available options.")
     public boolean help;
 }

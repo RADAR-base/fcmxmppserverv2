@@ -51,3 +51,6 @@ tmp
 *.tgz
 /dist/
 sqltool
+docker/*.jar
+docker/*.zip
+docker/get-notification-info

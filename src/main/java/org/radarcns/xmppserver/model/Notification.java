@@ -15,7 +15,8 @@ import java.util.Objects;
  * @author yatharthranjan
  */
 public class Notification implements Serializable {
-    private static final long serialVersionUID = 3284965300642907379L;
+    private static final long serialVersionUID = System.getenv("RADAR_NOTIFICATION_SERIAL_UUID") == null ? 3284965300642907379L :
+            Long.valueOf(System.getenv("RADAR_NOTIFICATION_SERIAL_UUID"));
 
     private final String title;
     private final String message;
@@ -115,6 +116,7 @@ public class Notification implements Serializable {
             ttlSeconds = payload.get("ttlSeconds") == null ? 2_419_200 : Integer.valueOf(payload.get("ttlSeconds"));
         } catch(NumberFormatException exc) {
             logger.error("TTL seconds value is invalid: ", exc);
+            return null;
         }
 
         Date date;
@@ -122,7 +124,8 @@ public class Notification implements Serializable {
             // First parsed as Double to avoid any errors with decimal points
             date = new Date(Double.valueOf(datetime).longValue());
         } catch(NumberFormatException exc) {
-            throw new IllegalArgumentException("The format for the Date Time is not correct.", exc);
+            logger.error("The format for the Date Time is not correct.", exc);
+            return null;
         }
 
         return new Notification.Builder().setTitle(notificationTitle)

@@ -8,6 +8,8 @@ import org.apache.commons.dbcp.BasicDataSource;
 import org.radarcns.xmppserver.ccs.CcsClientWrapper;
 import org.radarcns.xmppserver.commandline.CommandLineArgs;
 import org.radarcns.xmppserver.database.DataSourceWrapper;
+import org.radarcns.xmppserver.database.DatabaseCleanupTask;
+import org.radarcns.xmppserver.database.DefaultDatabaseCleanupTask;
 import org.radarcns.xmppserver.database.NotificationDatabaseHelper;
 import org.radarcns.xmppserver.model.Data;
 import org.radarcns.xmppserver.model.Notification;
@@ -15,16 +17,22 @@ import org.radarcns.xmppserver.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
  * Database notification scheduler service class for the XMPP Server
- * This has functionality for both in-memory and persisent data bases.
+ * This has functionality for both in-memory, persisent and server data bases.
  * Abstract class so has to instantiated through sub-classes. Look at
- * {@link InMemoryDatabaseNotificationSchedulerService} and
- * {@link PersistentDatabaseNotificationSchedulerService}
+ * {@link InMemoryDatabaseNotificationSchedulerService},
+ * {@link PersistentDatabaseNotificationSchedulerService} and
+ * {@link ServerDatabaseNotificationSchedulerService}
  *
  * @author yatharthranjan
  */
@@ -34,6 +42,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     private final DataSourceWrapper scheduleDataSourceWrapper;
     private final NotificationDatabaseHelper databaseHelper;
     private OneTimeTask<Notification> notificationOneTimeTask;
+    private final DatabaseCleanupTask databaseCleanupTask;
     private boolean isRunning = false;
 
     private static final String TASK_NAME = "notification-one-time";
@@ -59,6 +68,11 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         dataSource.setPassword(CommandLineArgs.dbPass);
         this.databaseHelper = new NotificationDatabaseHelper(dataSource);
         this.cacheNotifications = Collections.synchronizedMap(new HashMap<>());
+
+        long nightTime3am = LocalDateTime.now().until(LocalDate.now().plusDays(1).atStartOfDay().plus(Duration.ofHours(3)), ChronoUnit.MINUTES);
+        // Clean the DB every day looking for delivered notifications older than 30 days
+        databaseCleanupTask = new DefaultDatabaseCleanupTask(nightTime3am, TimeUnit.DAYS, CommandLineArgs.notificationCleanUpinterval,
+                TimeUnit.DAYS, CommandLineArgs.notificationExpiry, new DatabaseCleanupService(databaseHelper));
     }
 
     @Override
@@ -81,6 +95,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                     .build();
 
             scheduler.start();
+
+            databaseCleanupTask.startCleanup();
 
             Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
             migrateDataFromScheduler();
@@ -117,6 +133,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
         if (isRunning) {
             isRunning = false;
+            databaseCleanupTask.stopCleanup();
             scheduler.stop();
             scheduleDataSourceWrapper.close();
         } else {
@@ -140,7 +157,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         try {
             notifications = data.stream()
                     .map(s -> Notification.getNotification(s.getFrom(), s.getPayload()))
-                    .distinct()
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
         } catch (RuntimeException exc) {
             logger.error("Error while processing notification data: ", exc);
@@ -203,10 +220,12 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     public synchronized void schedule(Data data) {
         if (isRunning) {
             Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
-            if (!databaseHelper.checkIfNotificationExists(notification)) {
-                addNotification(notification);
-            } else {
-                logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
+            if (notification != null) {
+                if (!databaseHelper.checkIfNotificationExists(notification)) {
+                    addNotification(notification);
+                } else {
+                    logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
+                }
             }
         } else {
             logger.warn("Cannot schedule using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
@@ -224,7 +243,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
-            databaseHelper.removeAllNotifications(null, from);
+            databaseHelper.removeAllUndeliveredNotifications(null, from);
         } else {
             logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
@@ -241,7 +260,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                     scheduler.cancel(taskScheduledExecution.getTaskInstance());
                 }
             });
-            databaseHelper.removeAllNotifications(id, null);
+            databaseHelper.removeAllUndeliveredNotifications(id, null);
         } else {
             logger.warn("Cannot cancelUsingFcmToken using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());
         }
@@ -280,12 +299,11 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
 
     @Override
     public void confirmDelivery(String messageId, String token) {
-        // TODO: Uncomment so kafka sender can pick this up from the Database
-        //databaseHelper.updateDeliveryStatus(true, token, messageId);
+        databaseHelper.updateDeliveryStatus(true, token, messageId);
 
         // TODO: remove this and add in the Batched Kafka Sender
-        databaseHelper.removeNotification(messageId, token);
-        logger.info("Removed message from database after delivery: {} ", messageId);
+        //databaseHelper.removeNotification(messageId, token);
+        logger.info("Updated delivery status: {} ", messageId);
     }
 
     @Override
