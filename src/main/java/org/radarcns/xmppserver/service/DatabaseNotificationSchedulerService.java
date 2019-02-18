@@ -157,7 +157,7 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
         try {
             notifications = data.stream()
                     .map(s -> Notification.getNotification(s.getFrom(), s.getPayload()))
-                    .distinct()
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
         } catch (RuntimeException exc) {
             logger.error("Error while processing notification data: ", exc);
@@ -220,10 +220,12 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     public synchronized void schedule(Data data) {
         if (isRunning) {
             Notification notification = Notification.getNotification(data.getFrom(), data.getPayload());
-            if (!databaseHelper.checkIfNotificationExists(notification)) {
-                addNotification(notification);
-            } else {
-                logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
+            if (notification != null) {
+                if (!databaseHelper.checkIfNotificationExists(notification)) {
+                    addNotification(notification);
+                } else {
+                    logger.debug("Notification already exists for subject {} : {}", notification.getSubjectId(), notification);
+                }
             }
         } else {
             logger.warn("Cannot schedule using an instance of {} when it is not running. Please start the service first.", this.getClass().getName());

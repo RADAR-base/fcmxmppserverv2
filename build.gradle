@@ -124,6 +124,9 @@ tasks.matching {it instanceof Test}.all {
                 stdout.each { print(it) }
                 println('=' * 100)
             }
+        } else if(tr.resultType == TestResult.ResultType.SUCCESS) {
+            println()
+            print("${td.className}.${td.name} PASSED")
         }
     }
 
@@ -159,5 +162,5 @@ task copyDependencies(type: Copy) {
 }
 
 wrapper {
-    gradleVersion '4.8'
+    gradleVersion '5.0'
 }
