@@ -12,6 +12,7 @@ public class MockDataProducer {
     private int numOfTimes;
     private int numOfRecords;
     private int numOfUsers;
+
     public MockDataProducer(int numOfTimes, int numOfRecords, int numOfUsers) {
         this.numOfTimes = numOfTimes;
         this.numOfRecords = numOfRecords;
@@ -22,9 +23,6 @@ public class MockDataProducer {
         int id = 0;
         String subjectId = "1";
         String fcmToken = "1";
-//        int numOfTimes = 5;
-//        int numOfRecords = 1000;
-//        int numOfUsers = 100;
         /**
          * Run for 5 seconds with ingesting 1000 records from different users per second
          */
@@ -38,7 +36,7 @@ public class MockDataProducer {
                 dataPayload.put("subjectId", subjectId);
                 dataPayload.put("notificationTitle", "Schedule ID - " + i + "," + j);
                 dataPayload.put("notificationMessage", "Everytime it is same");
-                dataPayload.put("time", String.valueOf(Instant.now().plusSeconds(600).toEpochMilli()));
+                dataPayload.put("time", String.valueOf(Instant.now().plusSeconds(6000).toEpochMilli()));
                 dataPayload.put("ttlSeconds", "600");
 
                 Data data = new Data(fcmToken, dataPayload, "message - " + i + "," + j);

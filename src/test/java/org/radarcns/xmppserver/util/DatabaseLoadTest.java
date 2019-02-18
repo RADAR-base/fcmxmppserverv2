@@ -62,7 +62,7 @@ public class DatabaseLoadTest {
         assertTrue(true);
     }
 
-    @Test
+    @Test(timeout = 480_000)
     public void perSecond10000OneUser() throws InterruptedException {
         int numOfTimes = 5;
         int numOfRecords = 10000;
@@ -70,13 +70,12 @@ public class DatabaseLoadTest {
         mockDataProducer = new MockDataProducer(numOfTimes, numOfRecords, numOfUsers);
 
         mockDataProducer.generateDataToCache(cache);
-        // Sleep 4 more minutes for scheduling to be completed.
-        Thread.sleep(240_000);
+        // Sleep 6 more minutes for scheduling to be completed.
+        Thread.sleep(360_000);
 
         assertTrue(mockDataProducer.verifyData(databaseHelper));
 
         mockDataProducer.removeData(databaseHelper);
-        //databaseHelper.removeAllNotifications(String.valueOf(1), String.valueOf(1));
     }
 
     @Test(timeout = 480_000)
