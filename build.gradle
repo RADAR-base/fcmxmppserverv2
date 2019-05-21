@@ -19,7 +19,7 @@ ext {
     jCommanderVersion = '1.72'
     smackVersion = '4.2.4'
     dbSchedulerVersion = '3.2'
-    jacksonVersion = '2.9.6'
+    jacksonVersion = '2.9.9'
     hsqlVersion = '2.4.1'
     springVersion = '5.0.8.RELEASE'
     commonsDbcpVersion = '1.2.2'
