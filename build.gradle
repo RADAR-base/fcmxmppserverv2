@@ -3,7 +3,7 @@ apply plugin: 'maven'
 apply plugin: 'application'
 
 group = 'org.radarcns'
-version = '0.1.6'
+version = '0.1.7'
 
 description = "RADAR FCM XMPP Server"
 
@@ -28,8 +28,7 @@ ext {
 }
 
 repositories {
-
-     maven { url "http://repo.maven.apache.org/maven2" }
+     maven { url "https://repo.maven.apache.org/maven2" }
 }
 dependencies {
     compile group: 'org.igniterealtime.smack', name: 'smack-java7', version: smackVersion
