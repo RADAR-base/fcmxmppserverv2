@@ -120,6 +120,10 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
                               .setTtlSeconds((int) ttlSecondsNow)
                               .build();
                       CcsClientWrapper.getInstance().sendNotification(newNotification);
+                    } else {
+                      logger.warn(
+                          "The Notification {} delivery Time window has elapsed. Skipping it...",
+                          notification);
                     }
                   });
 
@@ -346,12 +350,8 @@ public abstract class DatabaseNotificationSchedulerService implements Notificati
     }
   }
 
-  /**
-   * Deprecated function -- Should not be used anymore.
-   *
-   * @param oldToken
-   * @param newToken
-   */
+  /** Deprecated function -- Should not be used anymore. */
+  @Deprecated
   @Override
   public synchronized void updateToken(String oldToken, String newToken) {
     if (isRunning) {
